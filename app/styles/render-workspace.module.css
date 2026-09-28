@@ -1,0 +1,82 @@
+.uploadGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.uploadCard {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid #d8d8d8;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.uploadCard h3,
+.uploadCard p {
+  margin: 0;
+}
+
+.uploadCard p {
+  margin-top: 6px;
+  color: #616161;
+  line-height: 1.45;
+}
+
+.dropArea {
+  min-height: 148px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 20px;
+  border: 1px dashed #8a8a8a;
+  border-radius: 10px;
+  background: #f7f7f7;
+  text-align: center;
+  cursor: pointer;
+}
+
+.dropArea:hover {
+  background: #f1f1f1;
+  border-color: #303030;
+}
+
+.dropTitle {
+  font-weight: 650;
+}
+
+.dropHint,
+.fileSummary {
+  color: #616161;
+  font-size: 13px;
+}
+
+.fileInput {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.proofPlaceholder {
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px dashed #8a8a8a;
+  border-radius: 12px;
+  color: #616161;
+  background: linear-gradient(135deg, #f7f7f7, #efefef);
+  text-align: center;
+}
+
+.proofPlaceholder strong {
+  color: #303030;
+}
