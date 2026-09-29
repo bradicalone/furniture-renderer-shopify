@@ -12,12 +12,12 @@ will handle uploads, storage, rendering jobs, and OpenAI API calls.
 
 - Shopify React Router app based on Shopify's official template
 - Embedded Admin home screen
-- Product-aware rendering workspace at `/app/render`
-- Furniture and fabric multi-image selection
+- Bulk folder review and confirmation workspace at `/app/render`
+- Parent-folder drag/drop and folder picker with relative-path grouping
 - White or transparent background setting
 - Contact-shadow and optional bedding settings
-- First-proof and adjustment workflow shell
-- Product-page Admin link: **More actions → Render product images**
+- Per-furniture fabric assignments and local draft confirmation
+- App-level entry point: **Apps → Furniture Renderer → New rendering job**
 - Server-only adapter for the existing rendering backend
 
 No furniture or fabric test assets are committed.
@@ -60,7 +60,7 @@ This repository owns:
 
 - Shopify OAuth and sessions
 - Embedded Shopify Admin UI
-- Product context and Admin link extension
+- Product matching and bulk folder review
 - Proof review and employee approval
 - Publishing approved outputs to Shopify
 
@@ -74,5 +74,6 @@ The existing Node.js rendering server owns:
 
 ## Next implementation milestone
 
-Connect signed uploads and the job endpoints defined in the backend contract,
-then replace the proof placeholder with polling and real output previews.
+Agree the bulk job API with the existing backend, then connect product matching,
+signed uploads, job history, proof review, approvals, publishing and downloads.
+Folder confirmation currently stays local and does not upload or create jobs.

@@ -1,10 +1,13 @@
+import { composeRenderInstructions } from "./render-instructions.server";
+import type { InstructionLevels } from "./render-instructions.server";
+
 export type RenderOptions = {
   background: "white" | "transparent";
   addContactShadow: boolean;
   addBedding: boolean;
 };
 
-export type CreateRenderJobInput = {
+export type CreateRenderJobInput = InstructionLevels & {
   shop: string;
   productId?: string;
   productTitle?: string;
@@ -44,7 +47,14 @@ export async function createRenderJob(
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(input),
+    body: JSON.stringify({
+      ...input,
+      renderingInstructions: composeRenderInstructions({
+        jobInstructions: input.jobInstructions ?? input.instructions,
+        furnitureInstructions: input.furnitureInstructions,
+        proofAdjustment: input.proofAdjustment,
+      }),
+    }),
   });
 
   if (!response.ok) {
