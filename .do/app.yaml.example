@@ -1,0 +1,55 @@
+# Fill runtime credentials and configure database permissions/network access before deployment.
+name: furniture-renderer
+region: sfo
+alerts:
+  - rule: DEPLOYMENT_FAILED
+  - rule: DOMAIN_FAILED
+ingress:
+  rules:
+    - component:
+        name: furniture-renderer
+      match:
+        path:
+          prefix: /
+services:
+  - name: furniture-renderer
+    github:
+      repo: bradicalone/furniture-renderer-shopify
+      branch: main
+      deploy_on_push: true
+    source_dir: /
+    dockerfile_path: Dockerfile
+    http_port: 3000
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-1gb
+    envs:
+      - key: NODE_ENV
+        scope: RUN_TIME
+        value: production
+      - key: PORT
+        scope: RUN_TIME
+        value: "3000"
+      - key: DATABASE_URL
+        scope: RUN_TIME
+        type: SECRET
+        value: REPLACE_WITH_FURNITURE_DATABASE_CONNECTION_STRING
+      - key: SHOPIFY_API_KEY
+        scope: RUN_TIME
+        value: REPLACE_WITH_FURNITURE_RENDERER_CLIENT_ID
+      - key: SHOPIFY_API_SECRET
+        scope: RUN_TIME
+        type: SECRET
+        value: REPLACE_IN_DIGITALOCEAN
+      - key: SHOPIFY_APP_URL
+        scope: RUN_TIME
+        value: ${APP_URL}
+      - key: SCOPES
+        scope: RUN_TIME
+        value: write_products
+      - key: RENDERING_API_URL
+        scope: RUN_TIME
+        value: REPLACE_WITH_RENDERING_SERVICE_HTTPS_URL
+      - key: RENDERING_API_TOKEN
+        scope: RUN_TIME
+        type: SECRET
+        value: REPLACE_IN_DIGITALOCEAN

@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:22-alpine
 RUN apk add --no-cache openssl
 
 EXPOSE 3000
@@ -9,10 +9,10 @@ ENV NODE_ENV=production
 
 COPY package.json package-lock.json* ./
 
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm ci --include=dev && npm cache clean --force
 
 COPY . .
 
-RUN npm run build
+RUN npx prisma generate --schema prisma/postgresql/schema.prisma && npm run build && npm prune --omit=dev
 
-CMD ["npm", "run", "docker-start"]
+CMD ["sh", "-c", "npx prisma migrate deploy --schema prisma/postgresql/schema.prisma && npm run start"]
