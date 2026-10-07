@@ -2,11 +2,11 @@
 
 client_id = "26e27f9b11b515bf3263c44b8086b253"
 name = "Furniture Renderer"
-application_url = "https://shopify.dev/apps/default-app-home"
+application_url = "https://renderer-app-eu9fw.ondigitalocean.app"
 embedded = true
 
 [build]
-automatically_update_urls_on_dev = true
+automatically_update_urls_on_dev = false
 include_config_on_deploy = true
 
 [webhooks]
@@ -17,4 +17,4 @@ api_version = "2026-10"
 scopes = "write_products"
 
 [auth]
-redirect_urls = [ "https://shopify.dev/apps/default-app-home/api/auth" ]
+redirect_urls = [ "https://renderer-app-eu9fw.ondigitalocean.app/auth/callback" ]
