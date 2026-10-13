@@ -74,6 +74,8 @@ The existing Node.js rendering server owns:
 
 ## Next implementation milestone
 
-Agree the bulk job API with the existing backend, then connect product matching,
-signed uploads, job history, proof review, approvals, publishing and downloads.
-Folder confirmation currently stays local and does not upload or create jobs.
+The Express v1 integration now connects explicit signed uploads/verification, bulk
+job creation, job history, proof review, adjustments, approvals and output links.
+Configure and deploy the backend, then run the storage-only test in
+`docs/backend-api-contract.md`. Product matching and Shopify publishing remain
+pending. Folder confirmation alone still does not upload or create jobs.

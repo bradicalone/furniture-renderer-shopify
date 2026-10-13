@@ -1,3 +1,4 @@
+import { BulkSubmission } from "../components/BulkSubmission";
 import { useRef, useState } from "react";
 import type { DragEvent } from "react";
 import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
@@ -23,7 +24,7 @@ export default function RenderWorkspace() {
   const [beds, setBeds] = useState<string[]>([]);
   const [jobInstructions, setJobInstructions] = useState('');
   const [furnitureInstructions, setFurnitureInstructions] = useState<Record<string, string>>({});
-  const [adjustments, setAdjustments] = useState<Record<string, string>>({});
+  const [firstProofs, setFirstProofs] = useState<Record<string, string>>({});
   const [comparisons, setComparisons] = useState<Record<string, File[]>>({});
   const [comparisonErrors, setComparisonErrors] = useState<Record<string, string>>({});
   const sequence = useRef(0);
@@ -31,15 +32,17 @@ export default function RenderWorkspace() {
   function reset() {
     sequence.current += 1;
     setManifest(null); setConfirmed(false); setError(''); setAssignments({}); setBeds([]); setBusy(false);
-    setFurnitureInstructions({}); setAdjustments({}); setComparisons({}); setComparisonErrors({});
+    setFurnitureInstructions({}); setFirstProofs({}); setComparisons({}); setComparisonErrors({});
   }
   function accept(files: SourceFile[]) {
     const next = parseFolder(files);
     setManifest(next);
+    setFirstProofs(Object.fromEntries(next.furniture.map(group => [group.name, group.files[0].relativePath])));
     setAssignments(Object.fromEntries(next.furniture.map(group => [group.name, []])));
   }
   async function drop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
+    if (confirmed) return;
     const entries = Array.from(event.dataTransfer.items).filter(item => item.kind === 'file')
       .map(item => item.webkitGetAsEntry?.());
     reset();
@@ -69,7 +72,7 @@ export default function RenderWorkspace() {
         <div className={styles.dropArea} onDragOver={event => event.preventDefault()} onDrop={drop}>
           <strong>Drop your rendering-job folder here</strong>
           <label htmlFor="job-folder">Choose folder</label>
-          <input id="job-folder" type="file" multiple
+          <input id="job-folder" type="file" multiple disabled={confirmed || busy}
             ref={element => { element?.setAttribute('webkitdirectory', ''); }}
             onChange={event => {
               const files = Array.from(event.currentTarget.files ?? []);
@@ -108,6 +111,7 @@ export default function RenderWorkspace() {
             <label><input type="checkbox" checked={shadows} onChange={event => setShadows(event.target.checked)} /> Realistic contact shadows</label>
             {manifest.furniture.map(item => <fieldset key={item.name}>
               <legend>{item.name}</legend>
+              <label>First proof angle <select value={firstProofs[item.name]} onChange={event => setFirstProofs(previous => ({...previous, [item.name]:event.target.value}))}>{item.files.map(source => <option key={source.relativePath} value={source.relativePath}>{source.relativePath}</option>)}</select></label>
               <label className={styles.option}>Furniture instructions (optional)
                 <textarea className={styles.instructions} maxLength={4000} rows={3} value={furnitureInstructions[item.name] ?? ''} onChange={event => setFurnitureInstructions(previous => ({ ...previous, [item.name]: event.target.value }))} placeholder="Additional instructions for this furniture item across its fabrics" />
               </label>
@@ -116,13 +120,13 @@ export default function RenderWorkspace() {
                   const files = Array.from(event.target.files ?? []);
                   event.target.value = '';
                   if (!files.length) return;
-                  const invalid = files.some(file => !/\.(jpe?g|png|webp)$/i.test(file.name) || !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || !file.size);
-                  setComparisonErrors(previous => ({ ...previous, [item.name]: invalid ? 'Choose nonempty JPG, PNG or WEBP comparison images.' : '' }));
+                  const invalid = files.some(file => !/\.(jpe?g|png|webp)$/i.test(file.name) || !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || !file.size || file.size > 20 * 1024 * 1024);
+                  setComparisonErrors(previous => ({ ...previous, [item.name]: invalid ? 'Choose nonempty JPG, PNG or WEBP comparison images up to 20 MiB.' : '' }));
                   if (!invalid) setComparisons(previous => ({ ...previous, [item.name]: files }));
                 }} />
               </label>
               {comparisonErrors[item.name] && <p role="alert">{comparisonErrors[item.name]}</p>}
-              <p>Comparison only; these files stay local until uploads are connected.</p>
+              <p>Comparison only; uploaded after confirmation and never sent to image generation.</p>
               <ul>{comparisons[item.name]?.map((file, index) => <li key={index}>{file.name}</li>)}</ul>
               {!!comparisons[item.name]?.length && <button type="button" onClick={() => setComparisons(previous => ({ ...previous, [item.name]: [] }))}>Remove comparison images</button>}
               <p>Choose the fabrics to render for this furniture item:</p>
@@ -138,39 +142,10 @@ export default function RenderWorkspace() {
           </fieldset>
           <p>{combinations} furniture-and-fabric combinations · one initial proof per combination.</p>
           {!ready && <p>Select at least one fabric for every furniture item.</p>}
-          <s-button disabled={!ready || confirmed} onClick={() => setConfirmed(true)}>Confirm folder and selections</s-button>
-          {confirmed && <s-button onClick={() => setConfirmed(false)}>Edit selections</s-button>}
+          <s-button disabled={!ready || confirmed || Object.values(comparisonErrors).some(Boolean)} onClick={() => setConfirmed(true)}>Confirm folder and selections</s-button>
+
         </s-section>}
-        {confirmed && <s-section heading="Folder confirmed">
-          <p role="status">Your folder and selections are confirmed locally. No files have been uploaded and no rendering job has been created.</p>
-          <p>Next: connect product matching and signed uploads to submit this bulk job. This draft is cleared when you leave or reload the page.</p>
-        </s-section>}
-        {confirmed && <s-section heading="Proofs and outputs">
-          <p>Each combination receives its own proof. Rendering is not connected yet; controls become available when the backend supplies proofs and approved outputs.</p>
-          {manifest.furniture.flatMap(item => (assignments[item.name] ?? []).map(fabric => {
-            const key = JSON.stringify([item.name, fabric]);
-            return <div className={styles.uploadCard} key={key}>
-              <h3>{item.name} / {fabric}</h3>
-              <p>Awaiting job submission — no proof generated.</p>
-              <details><summary>Instructions for this combination</summary>
-                <p>Protected rendering requirements → batch instructions → furniture instructions → proof adjustment.</p>
-                <p>Batch: {jobInstructions || 'None'}</p>
-                <p>Furniture: {furnitureInstructions[item.name] || 'None'}</p>
-              </details>
-              <div className={styles.proofPlaceholder}>Proof and completed output previews will appear here.</div>
-              <label className={styles.option}>Written proof adjustment (optional)
-                <textarea className={styles.instructions} rows={3} maxLength={4000} value={adjustments[key] ?? ''} onChange={event => setAdjustments(previous => ({ ...previous, [key]: event.target.value }))} placeholder="Describe changes for this furniture/fabric proof" />
-              </label>
-              <s-button-group>
-                <s-button disabled>Request adjustment / re-render proof</s-button>
-                <s-button disabled>Approve proof and render remaining angles</s-button>
-                <s-button disabled>Download outputs</s-button>
-                <s-button disabled>Publish to Shopify</s-button>
-              </s-button-group>
-              <p>Publishing requires a confirmed product match and approval of the current output revision.</p>
-            </div>;
-          }))}
-        </s-section>}
+        {confirmed && <BulkSubmission draft={{manifest, assignments, comparisons, firstProofs, jobInstructions, furnitureInstructions, background: background as 'white' | 'transparent', shadows, beds}} />}
       </>}
     </s-page>
   );

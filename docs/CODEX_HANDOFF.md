@@ -95,3 +95,42 @@ uploads remain pending. Proof/re-render/approval, output preview, download and
 Shopify publishing controls remain visible in confirmed drafts, with unavailable
 actions disabled pending integration. These are retained workflow requirements,
 not claims of working backend features. No selected file uploads automatically.
+
+## Azure storage configuration (confirmed by project owner)
+
+- Account: `uploads`
+- Container: `renderes` (exact spelling; do not rename to `renders`)
+- Access: private
+- CORS origin: `https://renderer-app-eu9fw.ondigitalocean.app`
+
+Storage configuration was reported as verified; it has not been independently
+checked from this repository. Azure credentials remain on the existing Express
+backend. The Shopify browser receives only scoped, expiring upload/read URLs.
+
+The current Shopify UI still confirms files locally only. There is no connected
+upload request, verification request, bulk job submission or status polling.
+The existing createRenderJob adapter is not invoked by the bulk screen. A working
+storage setup alone does not make the proposed browser smoke test executable.
+
+Before wiring the app, obtain the deployed backend contract: signed-upload request
+and response (including required PUT headers), upload verification, bulk-job
+creation, job status/proof responses, adjustment and approval endpoints, auth and
+shop-scoping requirements, errors and URL expiration behavior. Obtain sanitized
+examples or an OpenAPI document, not credentials or signed URLs. Confirm whether
+creating a job starts the worker automatically, and provide a storage-only test
+path that does not enqueue image generation.
+
+## Integration update — 2026-10-08 (supersedes earlier pending-upload notes)
+
+Implemented the provided Express v1 contract in the Shopify app. See
+`backend-api-contract.md` and the checked-in `rendering-openapi.json` for current
+configuration, wire schemas and test instructions. The server adapter now uses
+`/api/rendering/v1`, authenticated shop headers and idempotency keys; the earlier
+single-combination payload and prompt-override payload must not be used.
+
+Uploads/verification, explicit bulk creation, first-proof source selection, live
+job listing, detail polling, proof/comparison previews, adjustment/re-render,
+revision approval, failed-task retry, cancellation and individual output links
+are wired. Product matching and Shopify publishing are still pending. Backend
+production deployment and live browser behavior have not been verified here.
+No upload or paid generation was triggered while implementing this integration.

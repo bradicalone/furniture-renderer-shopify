@@ -1,126 +1,74 @@
-# Rendering backend API contract
+# Rendering backend integration
 
-> Legacy single-combination proposal: the current bulk folder UI does not call
-> these endpoints. Before integrating, evolve this contract to BulkJob,
-> FurnitureItem, Fabric, Combination and Output models described in
-> `CODEX_HANDOFF.md`. Signed-upload, bulk creation/listing and revision-specific
-> approval response schemas still need agreement with the existing backend.
-> This document does not describe an implemented API.
+The checked-in `rendering-openapi.json` is the implemented backend contract,
+provided from `mcgee-api/docs/rendering-openapi.json` on 2026-10-08. It replaces
+the earlier `/v1/render-jobs` proposal. Regenerate wire types with
+`python3 scripts/rendering-types.py` after updating the contract snapshot.
 
-The Shopify app owns Shopify authentication, product context, employee-facing
-screens, and publishing approved images to products. The existing Node.js
-service owns uploads, durable job state, image generation, file storage, and
-OpenAI credentials.
+## App configuration
 
-## Authentication
+Set these server-side runtime variables in DigitalOcean:
 
-Server-to-server requests use:
+- `RENDERING_API_URL`: the actual HTTPS API origin, or full base ending in
+  `/api/rendering/v1`. Do not include a job/upload route or query string.
+- `RENDERING_API_TOKEN`: shared token, encrypted, never sent to the browser.
 
-```http
-Authorization: Bearer <RENDERING_API_TOKEN>
-```
+The Express deployment must enable `RENDERING_ENABLED=true`, run its rendering
+migration, and allowlist the installed store in `RENDERING_ALLOWED_SHOPS`.
+Confirm production deployment separately; this repository has not verified it.
+The backend owns the canonical protected prompt and its instruction snapshots.
+The Shopify app sends only job/furniture instructions and revision adjustments;
+it does not send the old `renderingInstructions` property (the API rejects it).
+The legacy server prompt composer remains as a reference, not the wire contract.
 
-The rendering service must never accept this credential from browser code.
-Before production, replace the static token with signed short-lived requests or
-workload identity if supported by the hosting platform.
+## Implemented Shopify flow
 
-## Planned endpoints
+1. Parse the folder locally, choose fabrics, settings, comparisons and a first
+   proof source per furniture item. Confirming does not upload.
+2. Explicitly select **Upload and verify images only**. The browser hashes each
+   file, calls the authenticated app gateway for a signed URL, PUTs the raw bytes
+   to Azure, and calls verification through the gateway. Maximum 20 MiB per file.
+3. After every upload is verified, explicitly acknowledge rendering charges and
+   choose **Create job and generate proofs**. Backend creation queues generation.
+4. Open the saved job for polling, proofs, comparison previews, adjustments,
+   approval, remaining-angle progress, failure retries and cancellation.
+5. Open generated image links to view/download. URLs refresh every ten minutes
+   while previews are mounted; employees can refresh links manually as well.
 
-### `POST /v1/render-jobs`
+Azure account `uploads`, private container `renderes` (exact spelling), and CORS
+origin `https://renderer-app-eu9fw.ondigitalocean.app` were confirmed by the owner.
+The browser accepts signed upload URLs only for that account/container. Account
+credentials are owned by Express. The browser sends neither service bearer tokens
+nor shop headers to Azure. Comparisons are stored for review, never image inputs.
 
-Creates a job after source files have been stored or uploaded with signed URLs.
+The app gateway at `/app/api/rendering` authenticates Shopify on every request,
+derives `X-Rendering-Shop` from `session.shop`, maps only fixed operations, and
+forwards idempotency keys. It does not accept a destination URL from the browser.
+Signed responses have no-store caching. Raw backend diagnostics are not exposed.
 
-```json
-{
-  "shop": "example.myshopify.com",
-  "productId": "gid://shopify/Product/123",
-  "productTitle": "Mabel Twin Bed",
-  "furnitureName": "mabel-twin-bed",
-  "fabricName": "velvet-cognac",
-  "furnitureFiles": [],
-  "fabricFiles": [],
-  "options": {
-    "background": "white",
-    "addContactShadow": true,
-    "addBedding": true
-  },
-  "instructions": "Preserve piping and proportions."
-}
-```
+## Retry and draft limits
 
-Response:
+Action keys and verified upload IDs are retained in browser memory for the current
+confirmed draft. Retry the same action on the same page after a network failure.
+Upload retries re-request the original key to refresh expired write SAS URLs.
+Confirmation locks the draft. Reloading loses unsent draft/retry state; after an
+uncertain job submission, check the jobs dashboard before creating another job.
+Saved jobs themselves persist in the backend and remain accessible from the list.
+Proof adjustments bind to the current revision; successful mutations refresh state.
+Expired/failed requests may be retried without pretending an approval succeeded.
 
-```json
-{ "id": "job_123", "status": "queued" }
-```
+## Not yet implemented / verified
 
-### `GET /v1/render-jobs/:jobId`
+- Product search/match confirmation and Shopify media publication (remain disabled).
+- Durable browser upload-resume state across reloads, and bulk ZIP downloads.
+- Live production smoke test and browser end-to-end verification.
 
-Returns job status, first-proof URL, output image URLs, and errors.
+## Storage-only smoke test
 
-### `POST /v1/render-jobs/:jobId/adjustments`
-
-Submits employee instructions and creates another proof.
-
-### `POST /v1/render-jobs/:jobId/approve`
-
-Approves the proof and queues every remaining furniture angle.
-
-### `POST /v1/render-jobs/:jobId/cancel`
-
-Cancels work that has not completed.
-
-## Upload flow
-
-Large image files should not pass through the embedded app process. The planned
-flow is:
-
-1. Shopify app requests signed upload URLs from the rendering backend.
-2. Browser uploads each image directly to object storage.
-3. Shopify app creates the render job using stored object identifiers.
-4. Backend processes the first angle and returns a proof.
-5. Approval triggers the remaining angles.
-
-## Publishing
-
-After approval, the Shopify app receives durable output URLs and uses Shopify's
-Admin GraphQL API to create product media. The rendering backend does not need
-Shopify Admin credentials.
-
-## Required rendering controls and instruction policy
-
-Bulk entry must retain all rendering features. For each combination, compose:
-
-1. Protected server-owned defaults from `render-instructions.server.ts`.
-2. Optional `jobInstructions` (whole batch).
-3. Optional `furnitureInstructions` (all fabrics for that furniture).
-4. Optional `proofAdjustment` (only the selected combination/current revision).
-
-Each employee field accepts at most 4000 characters. Missing fields are omitted.
-Employee text is supplemental data, never a replacement for the protected policy.
-The existing server-only adapter now sends `renderingInstructions` with a policy
-version, protected instructions, ordered supplemental sections and combined prompt.
-This is a proposed payload extension: the Express service must implement support
-before that adapter is used for live rendering. It is not wired to the bulk UI yet.
-
-The Express worker must own/verify the canonical policy, reject policy overrides,
-and compose again on every initial generation, adjustment and remaining-angle
-render. Preserve geometry, proportions, seams, piping, camera angle and identity.
-Text composition is not a guarantee of image fidelity: assess generated proofs
-and require employee approval before rendering remaining angles or publishing.
-Store instruction snapshots and policy version against each proof revision;
-carry accepted adjustments forward when rendering the remaining angles.
-
-Retain structured white/transparent background, realistic contact shadows and
-per-furniture optional mattress/white bedding. Store Cylindo comparison uploads
-separately from furniture angles and fabric references; comparisons are optional
-and must not redefine furniture identity. They use the same signed-upload process,
-only after confirmation, with server-side content validation and shop ownership.
-
-The UI currently retains local comparison File objects and all instruction drafts.
-Per-combination proof controls and output preview areas are visible but disabled
-until real backend state exists. Do not fabricate completed images or approvals.
-Enable re-rendering only for a valid current proof; a new revision invalidates
-prior approval. Download real generated outputs; publish only approved current
-outputs with an explicitly confirmed Shopify product match. Keep publication
-retry-safe and show individual output failures.
+After deploying both applications and setting the variables/allowlist, select one
+furniture image and one fabric reference. Confirm the folder, click upload/verify,
+and STOP at **All images uploaded and verified**. This does not create a job or
+queue paid generation. Expect an Azure PUT 201 and successful verification.
+For a separately authorized rendering test, create the job, check the dashboard,
+review its proof, request an adjustment and approve the resulting revision.
+Never share SAS query strings, bearer tokens or database credentials in logs.
