@@ -36,8 +36,21 @@ export async function renderingRequest<T>(shop: string, path: string, body?: unk
   }
   if (!response.ok) {
     let code = 'backend_error';
-    try { const error = await response.json(); if (/^[a-z_]{1,80}$/.test(error?.error?.code)) code = error.error.code; } catch { /* Do not expose proxy/provider bodies. */ }
-    throw new RenderingApiError(response.status, code, `Rendering request failed (${response.status}, ${code}).`);
+    let detail = '';
+    const safeUploadMessages = new Set([
+      'Image exceeds the size limit or is empty.',
+      'Uploaded bytes do not match the declared size and checksum.',
+      'Upload a single-frame JPEG, PNG or WebP with matching content type.',
+      'Decoded image is too large. Reduce its dimensions.',
+      'Image could not be decoded safely. Upload a valid JPEG, PNG or WebP.',
+      'Image is too large.',
+    ]);
+    try {
+      const error = await response.json();
+      if (/^[a-z_]{1,80}$/.test(error?.error?.code)) code = error.error.code;
+      if (response.status === 422 && code === 'invalid_upload' && safeUploadMessages.has(error?.error?.message)) detail = ` ${error.error.message}`;
+    } catch { /* Do not expose proxy/provider bodies. */ }
+    throw new RenderingApiError(response.status, code, `Rendering request failed (${response.status}, ${code}).${detail}`);
   }
   try { return await response.json() as T; }
   catch {

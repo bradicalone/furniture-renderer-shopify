@@ -27,6 +27,10 @@ test('server adapter keeps credentials on fixed backend origin and preserves pag
     await renderingRequest('store.myshopify.com',`/jobs?limit=25&cursor=${id}`);
     global.fetch=async () => new Response('private provider diagnostics', {status:500});
     await assert.rejects(renderingRequest('store.myshopify.com','/jobs'), error => !error.message.includes('private provider'));
+    global.fetch=async () => Response.json({error:{code:'invalid_upload',message:'Decoded image is too large. Reduce its dimensions.'}}, {status:422});
+    await assert.rejects(renderingRequest('store.myshopify.com','/jobs'), /Decoded image is too large/);
+    global.fetch=async () => Response.json({error:{code:'invalid_upload',message:'secret unexpected diagnostics'}}, {status:422});
+    await assert.rejects(renderingRequest('store.myshopify.com','/jobs'), error => !error.message.includes('secret'));
     process.env.RENDERING_API_URL='https://api.example.com/wrong';
     await assert.rejects(renderingRequest('store.myshopify.com','/jobs'), /HTTPS origin/);
   } finally {
