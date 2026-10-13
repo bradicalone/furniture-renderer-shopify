@@ -20,6 +20,7 @@ export async function renderingRequest<T>(shop: string, path: string, body?: unk
   const [pathname, query] = path.split('?');
   base.pathname = `/api/rendering/v1${pathname}`;
   base.search = query ?? '';
+  const timeout = AbortSignal.timeout(25000);
   let response: Response;
   try {
     response = await fetch(base, {
@@ -27,14 +28,20 @@ export async function renderingRequest<T>(shop: string, path: string, body?: unk
       headers: { Authorization: `Bearer ${process.env.RENDERING_API_TOKEN}`, 'X-Rendering-Shop': shop,
         'Content-Type': 'application/json', ...(key ? { 'Idempotency-Key': key } : {}) },
       body: body === undefined ? undefined : JSON.stringify(body),
-      signal: AbortSignal.timeout(120000), redirect: 'error',
+      signal: timeout, redirect: 'error',
     });
-  } catch { throw new RenderingApiError(503, 'unavailable', 'Rendering service could not be reached. Retry the same action.'); }
+  } catch {
+    if (timeout.aborted) throw new RenderingApiError(504, 'backend_timeout', 'The rendering API did not respond within 25 seconds. Check the Express server logs and retry the same action.');
+    throw new RenderingApiError(503, 'unavailable', 'Rendering service could not be reached. Check API connectivity and retry the same action.');
+  }
   if (!response.ok) {
     let code = 'backend_error';
     try { const error = await response.json(); if (/^[a-z_]{1,80}$/.test(error?.error?.code)) code = error.error.code; } catch { /* Do not expose proxy/provider bodies. */ }
     throw new RenderingApiError(response.status, code, `Rendering request failed (${response.status}, ${code}).`);
   }
   try { return await response.json() as T; }
-  catch { throw new RenderingApiError(502, 'invalid_response', 'Rendering service returned an invalid response.'); }
+  catch {
+    if (timeout.aborted) throw new RenderingApiError(504, 'backend_timeout', 'The rendering API response timed out. Retry the same action.');
+    throw new RenderingApiError(502, 'invalid_response', 'Rendering service returned an invalid response.');
+  }
 }
