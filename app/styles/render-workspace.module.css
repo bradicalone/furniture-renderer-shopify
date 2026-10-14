@@ -94,3 +94,55 @@
   padding: 10px;
   font: inherit;
 }
+
+.approvalNotice,
+.requestError {
+  padding: 16px;
+  margin-block: 12px;
+  border: 1px solid;
+  border-inline-start-width: 5px;
+  border-radius: 8px;
+}
+
+.approvalNotice {
+  background: #fff4ce;
+  border-color: #8a6116;
+  color: #573b00;
+}
+
+.approvalNotice a {
+  color: inherit;
+  font-weight: 650;
+  text-decoration: underline;
+}
+
+.requestError {
+  background: #fff0f0;
+  border-color: #b42318;
+  color: #8e1f15;
+}
+
+.proofReview {
+  scroll-margin-top: 24px;
+}
+
+.folderGuide {
+  margin-block: 16px;
+  padding: 16px;
+  border: 1px solid #d8d8d8;
+  border-radius: 10px;
+  background: #f7f7f7;
+}
+
+.folderExample {
+  overflow-x: auto;
+  padding: 12px;
+  background: #fff;
+  border-radius: 6px;
+  line-height: 1.5;
+}
+
+.folderGuide li {
+  margin-block: 8px;
+  overflow-wrap: anywhere;
+}

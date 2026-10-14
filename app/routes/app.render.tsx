@@ -68,7 +68,32 @@ export default function RenderWorkspace() {
     <s-page heading="New rendering job" inlineSize="large">
       <s-button slot="secondary-actions" href="/app">Back to jobs</s-button>
       <s-section heading="1. Choose a parent folder">
-        <p>Choose a folder containing furniture/item-name/ images and fabrics/fabric-name/ references. Files stay on your device during review.</p>
+        <p>Organize your images as shown below, then choose or drop the parent folder. Files stay on your device until you confirm and start uploading.</p>
+        <div className={styles.folderGuide}>
+          <h3>Folder structure and naming</h3>
+          <pre className={styles.folderExample} aria-label="Example rendering job folder structure">{`rendering-job/
+├── furniture/
+│   ├── mabel-king-bed__SKU12345/
+│   │   ├── 01-front.jpg
+│   │   ├── 02-left-three-quarter.jpg
+│   │   └── 03-detail-piping.jpg
+│   └── louise-queen-bed__SKU67890/
+│       ├── 01-front.jpg
+│       └── 02-side.jpg
+└── fabrics/
+    ├── linen-bisque/
+    │   ├── reference-01.jpg
+    │   └── reference-02.jpg
+    └── velvet-fawn/
+        └── reference-01.jpg`}</pre>
+          <ul>
+            <li><strong>Furniture folders:</strong> <code>product-title__SKU</code> — title first, then two underscores and the actual SKU. Replace the example titles and SKUs with your own; preserve the SKU exactly.</li>
+            <li><strong>Angle files:</strong> <code>01-front.jpg</code>, <code>02-left-three-quarter.jpg</code>, and so on. Use two-digit numbering and a descriptive angle or detail name. Include all your angles; you choose the first proof during review.</li>
+            <li><strong>Fabric folders:</strong> use a consistent fabric-and-color name, such as <code>linen-bisque</code>. Number references <code>reference-01.jpg</code>, <code>reference-02.jpg</code>, and so on.</li>
+            <li><strong>Parent folder:</strong> choose the whole <code>rendering-job</code> folder, containing both <code>furniture</code> and <code>fabrics</code>. The parent folder can have any name.</li>
+          </ul>
+          <p>This naming convention helps organize your files. Automatic SKU matching and Shopify publishing are not connected yet.</p>
+        </div>
         <div className={styles.dropArea} onDragOver={event => event.preventDefault()} onDrop={drop}>
           <strong>Drop your rendering-job folder here</strong>
           <label htmlFor="job-folder">Choose folder</label>

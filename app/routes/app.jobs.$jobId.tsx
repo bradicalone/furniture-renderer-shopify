@@ -34,6 +34,7 @@ export default function JobDetail() {
   const {jobId} = useLoaderData<typeof loader>();
   const [job, setJob] = useState<DetailResponse | null>(null);
   const [error, setError] = useState('');
+  const [pollError, setPollError] = useState('');
   const [busy, setBusy] = useState(false);
   const [adjustments, setAdjustments] = useState<Record<string, string>>({});
   const pending = useRef<{signature:string; key:string} | null>(null);
@@ -41,12 +42,13 @@ export default function JobDetail() {
   const refresh = useCallback(async () => {
     const next = await renderingCall<DetailResponse>({operation:'detail', jobId});
     setJob(next);
+    setPollError('');
   }, [jobId]);
   useEffect(() => {
     let stopped = false;
     let timer: ReturnType<typeof setTimeout>;
     async function poll() {
-      try { await refresh(); } catch (error) { if (!stopped) setError(error instanceof Error ? error.message : 'Unable to load job.'); }
+      try { await refresh(); } catch (error) { if (!stopped) setPollError(error instanceof Error ? error.message : 'Unable to load job.'); }
       if (!stopped) timer = setTimeout(poll, 5000);
     }
     void poll();
@@ -72,12 +74,22 @@ export default function JobDetail() {
     }
     finally { active.current = false; setBusy(false); }
   }
+  const awaitingReview = job?.cancelled ? [] : job?.combinations.filter(combination =>
+    combination.approvedRevision !== combination.currentRevision &&
+    combination.revisions.some(revision => revision.number === combination.currentRevision && revision.outputs.some(output => output.kind === 'proof'))
+  ) ?? [];
   return <s-page heading={job?.name ?? 'Rendering job'} inlineSize="large">
     <s-button slot="secondary-actions" href="/app">Back to jobs</s-button>
-    {error && <p role="alert">{error}</p>}
+    {error && <div className={styles.requestError} role="alert"><strong>Action could not be confirmed</strong><p>{error}</p><p>Check the latest job status before retrying the action.</p></div>}
+    {pollError && <div className={styles.requestError} role="alert"><strong>Progress update unavailable</strong><p>{pollError}</p><p>The status below is the last received update. This does not mean rendering failed. Updates will retry automatically.</p></div>}
     {!job && <p role="status">Loading job…</p>}
     {job && <>
       <s-section heading="Progress">
+        {awaitingReview.length > 0 && <div className={styles.approvalNotice} role="status">
+          <strong>Proof ready — approval required</strong>
+          <p>Review and approve each ready proof below to start its remaining angles, or request an adjustment.</p>
+          <a href={`#review-${awaitingReview[0].id}`}>Go to proof review and approval</a>
+        </div>}
         <p role="status">{job.status} · {job.progress.completed}/{job.progress.planned} outputs · {job.progress.failed} failed · {job.progress.running} running</p>
         <progress max={Math.max(1,job.progress.planned)} value={job.progress.completed} />
         {job.completedAt && <p>Completed: {new Date(job.completedAt).toLocaleString()}</p>}
@@ -98,7 +110,7 @@ export default function JobDetail() {
           {!proof && <p>Proof pending. Rendering progress is refreshed every five seconds.</p>}
           {revision?.outputs.map(output => <OutputPreview key={output.id} jobId={jobId} outputId={output.id} label={`${output.kind}: ${output.relativePath}`} />)}
           {!!furniture?.comparisons?.length && <details><summary>Cylindo comparisons (not rendering inputs)</summary>{furniture.comparisons.map(source => <OutputPreview key={source.uploadId} jobId={jobId} uploadId={source.uploadId} label={source.relativePath} />)}</details>}
-          {!!proof && !job.cancelled && <fieldset disabled={busy}>
+          {!!proof && !job.cancelled && <fieldset id={`review-${combination.id}`} className={styles.proofReview} disabled={busy}>
             <legend>Review current proof</legend>
             <label>Adjustment instructions<textarea className={styles.instructions} maxLength={4000} rows={3} value={adjustments[field] ?? ''} onChange={event => setAdjustments(previous => ({...previous,[field]:event.target.value}))} /></label>
             <button onClick={() => mutate('adjust', {revision:combination.currentRevision, instructions:adjustments[field] ?? ''}, combination.id)}>Request adjustment / re-render</button>
