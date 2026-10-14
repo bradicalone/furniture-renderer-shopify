@@ -146,3 +146,49 @@
   margin-block: 8px;
   overflow-wrap: anywhere;
 }
+
+.jobList {
+  display: grid;
+  gap: 16px;
+  margin-block: 16px;
+}
+
+.jobCard {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+  border: 1px solid #d8d8d8;
+  border-inline-start: 4px solid #858d78;
+  border-radius: 10px;
+  background: #f7f8f5;
+  color: #303030;
+  overflow-wrap: anywhere;
+}
+
+.jobCard h3,
+.jobCard p {
+  margin: 0;
+}
+
+.jobCardHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.jobStatus {
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: #e4e8de;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.jobDates {
+  display: grid;
+  gap: 4px;
+  color: #616161;
+  font-size: 13px;
+}

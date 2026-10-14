@@ -5,6 +5,7 @@ import { authenticate } from '../shopify.server';
 import { boundary } from '@shopify/shopify-app-react-router/server';
 import { renderingCall } from '../lib/rendering-client';
 import type { ListResponse } from '../lib/rendering-types';
+import styles from '../styles/render-workspace.module.css';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
@@ -33,11 +34,20 @@ export default function Index() {
       {error && <p role="alert">{error}</p>}
       {!data && !error && <p>Loading jobs…</p>}
       {data && !data.items.length && <p>No jobs on this page. Create a rendering job to start.</p>}
-      {data?.items.map(job => <div key={job.id}>
-        <h3><Link to={`/app/jobs/${job.id}`}>{job.name}</Link></h3>
-        <p>{job.status} · {job.progress.completed}/{job.progress.planned} outputs · {job.progress.failed} failed</p>
-        <p>Created {new Date(job.createdAt).toLocaleString()}{job.completedAt ? ` · Completed ${new Date(job.completedAt).toLocaleString()}` : ''}</p>
-      </div>)}
+      <div className={styles.jobList}>
+        {data?.items.map(job => <article key={job.id} className={styles.jobCard} aria-labelledby={`job-${job.id}`}>
+          <div className={styles.jobCardHeader}>
+            <h3 id={`job-${job.id}`}><Link to={`/app/jobs/${job.id}`}>{job.name}</Link></h3>
+            <span className={styles.jobStatus}>{job.status.replaceAll('_', ' ')}</span>
+          </div>
+          <p>{job.progress.completed}/{job.progress.planned} outputs · {job.progress.failed} failed</p>
+          <div className={styles.jobDates}>
+            <span>Created <time dateTime={job.createdAt}>{new Date(job.createdAt).toLocaleString()}</time></span>
+            {job.completedAt && <span>Completed <time dateTime={job.completedAt}>{new Date(job.completedAt).toLocaleString()}</time></span>}
+          </div>
+          <Link to={`/app/jobs/${job.id}`}>View job and actions →</Link>
+        </article>)}
+      </div>
       {cursor && <button onClick={() => { setData(null); setCursor(undefined); }}>Newest jobs</button>}
       {data?.nextCursor && <button onClick={() => { setData(null); setCursor(data.nextCursor!); }}>Older jobs</button>}
     </s-section>
