@@ -74,7 +74,7 @@ export default function JobDetail() {
     }
     finally { active.current = false; setBusy(false); }
   }
-  const awaitingReview = job?.cancelled ? [] : job?.combinations.filter(combination =>
+  const awaitingReview = (job?.cancelled || job?.archivedAt) ? [] : job?.combinations.filter(combination =>
     combination.approvedRevision !== combination.currentRevision &&
     combination.revisions.some(revision => revision.number === combination.currentRevision && revision.outputs.some(output => output.kind === 'proof'))
   ) ?? [];
@@ -85,6 +85,8 @@ export default function JobDetail() {
     {!job && <p role="status">Loading job…</p>}
     {job && <>
       <s-section heading="Progress">
+        <p>Created by: {job.createdBy?.displayName ?? 'Unknown'}</p>
+        {job.archivedAt && <p>This job is archived. Restore it from Archived jobs to enable actions.</p>}
         {awaitingReview.length > 0 && <div className={styles.approvalNotice} role="status">
           <strong>Proof ready — approval required</strong>
           <p>Review and approve each ready proof below to start its remaining angles, or request an adjustment.</p>
@@ -93,7 +95,7 @@ export default function JobDetail() {
         <p role="status">{job.status} · {job.progress.completed}/{job.progress.planned} outputs · {job.progress.failed} failed · {job.progress.running} running</p>
         <progress max={Math.max(1,job.progress.planned)} value={job.progress.completed} />
         {job.completedAt && <p>Completed: {new Date(job.completedAt).toLocaleString()}</p>}
-        {!job.cancelled && job.status !== 'completed' && <button disabled={busy} onClick={() => { if (window.confirm('Cancel this job? Pending work will stop; already dispatched renders may still incur charges.')) void mutate('cancel', {}); }}>Cancel job</button>}
+        {!job.cancelled && !job.archivedAt && job.status !== 'completed' && <button disabled={busy} onClick={() => { if (window.confirm('Cancel this job? Pending work will stop; already dispatched renders may still incur charges.')) void mutate('cancel', {}); }}>Cancel job</button>}
         <p>Approval renders remaining angles. Adjustments and retries may incur image-generation charges.</p>
       </s-section>
       {job.combinations.map(combination => {
@@ -110,14 +112,14 @@ export default function JobDetail() {
           {!proof && <p>Proof pending. Rendering progress is refreshed every five seconds.</p>}
           {revision?.outputs.map(output => <OutputPreview key={output.id} jobId={jobId} outputId={output.id} label={`${output.kind}: ${output.relativePath}`} />)}
           {!!furniture?.comparisons?.length && <details><summary>Cylindo comparisons (not rendering inputs)</summary>{furniture.comparisons.map(source => <OutputPreview key={source.uploadId} jobId={jobId} uploadId={source.uploadId} label={source.relativePath} />)}</details>}
-          {!!proof && !job.cancelled && <fieldset id={`review-${combination.id}`} className={styles.proofReview} disabled={busy}>
+          {!!proof && !job.cancelled && !job.archivedAt && <fieldset id={`review-${combination.id}`} className={styles.proofReview} disabled={busy}>
             <legend>Review current proof</legend>
             <label>Adjustment instructions<textarea className={styles.instructions} maxLength={4000} rows={3} value={adjustments[field] ?? ''} onChange={event => setAdjustments(previous => ({...previous,[field]:event.target.value}))} /></label>
             <button onClick={() => mutate('adjust', {revision:combination.currentRevision, instructions:adjustments[field] ?? ''}, combination.id)}>Request adjustment / re-render</button>
             <button disabled={combination.approvedRevision === combination.currentRevision} onClick={() => mutate('approve',{revision:combination.currentRevision},combination.id)}>Approve proof and render remaining angles</button>
           </fieldset>}
           {currentTasks.filter(task => task.state === 'failed').map(task => <p role="alert" key={task.id}>{task.kind}: {task.error?.message ?? 'Rendering failed'} (attempts: {task.totalAttempts})</p>)}
-          {!!failureIds.length && !job.cancelled && <button disabled={busy} onClick={() => mutate('retry',{taskIds:failureIds})}>Retry failed renders</button>}
+          {!!failureIds.length && !job.cancelled && !job.archivedAt && <button disabled={busy} onClick={() => mutate('retry',{taskIds:failureIds})}>Retry failed renders</button>}
           <p>Shopify publishing is not connected yet. Product matches must be confirmed before publishing.</p>
         </s-section>;
       })}

@@ -56,3 +56,12 @@ test('bulk manifest uses verified IDs, chosen angle, explicit pairs and comparis
   assert.equal('shop' in result,false);
   assert.equal('renderingInstructions' in result,false);
 });
+
+ test('archive routes are scoped to validated jobs and archive filtering is explicit', () => {
+  for (const operation of ['archive','restore']) {
+    assert.deepEqual(renderingOperation({operation,jobId:id,body:{shop:'evil'}}), {path:`/jobs/${id}/${operation}`,body:{},mutation:true});
+    assert.throws(()=>renderingOperation({operation,jobId:'../other'}));
+  }
+  assert.equal(renderingOperation({operation:'list',archived:true,cursor:id}).path,`/jobs?limit=25&archived=true&cursor=${id}`);
+  assert.equal(renderingOperation({operation:'list',archived:'true'}).path,'/jobs?limit=25');
+});

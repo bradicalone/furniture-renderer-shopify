@@ -11,7 +11,9 @@ export function renderingOperation(input: Record<string, unknown>) {
     case 'upload': return { path: '/uploads', body: payload, mutation: true };
     case 'verify': return { path: `/uploads/${uuid(input.uploadId)}/verify`, body: {}, mutation: false };
     case 'create': return { path: '/jobs', body: payload, mutation: true };
-    case 'list': return { path: `/jobs?limit=25${input.cursor ? `&cursor=${uuid(input.cursor)}` : ''}`, body: undefined, mutation: false };
+    case 'archive': return { path: `${job()}/archive`, body: {}, mutation: true };
+    case 'restore': return { path: `${job()}/restore`, body: {}, mutation: true };
+    case 'list': return { path: `/jobs?limit=25${input.archived === true ? '&archived=true' : ''}${input.cursor ? `&cursor=${uuid(input.cursor)}` : ''}`, body: undefined, mutation: false };
     case 'detail': return { path: job(), body: undefined, mutation: false };
     case 'download': return { path: `${job()}/outputs/${uuid(input.outputId)}/download`, body: undefined, mutation: false };
     case 'source': return { path: `/uploads/${uuid(input.uploadId)}/download`, body: undefined, mutation: false };

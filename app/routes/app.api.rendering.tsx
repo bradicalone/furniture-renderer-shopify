@@ -26,6 +26,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     if (raw.length > 2 * 1024 * 1024) return json({ error: { message: 'Split this batch into smaller jobs.' } }, 413);
     const input = JSON.parse(raw);
     if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('Invalid request.');
+    if (input.operation === 'create') {
+      if (!input.body || typeof input.body !== 'object' || Array.isArray(input.body)) throw new Error('Invalid manifest.');
+      // Never forward an identity supplied by the browser.
+      delete input.body.createdBy;
+      const user = session.onlineAccessInfo?.associated_user;
+      const userId = context.sessionToken?.sub;
+      if (userId && user && String(user.id) === userId) {
+        const displayName = [user.first_name, user.last_name].filter(Boolean).join(' ').trim();
+        if (displayName) input.body.createdBy = { shopifyUserId: userId, displayName };
+      }
+    }
     const operation = renderingOperation(input);
     if (operation.mutation && (typeof input.key !== 'string' || !/^[A-Za-z0-9._:-]{1,128}$/.test(input.key))) throw new Error('Idempotency key required.');
     log('backend_started');
