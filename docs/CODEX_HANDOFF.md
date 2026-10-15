@@ -134,3 +134,24 @@ revision approval, failed-task retry, cancellation and individual output links
 are wired. Product matching and Shopify publishing are still pending. Backend
 production deployment and live browser behavior have not been verified here.
 No upload or paid generation was triggered while implementing this integration.
+
+### Universal furniture preservation default (2026-10-15)
+
+The app's reference prompt now uses `furniture-preservation-v3`. This is not the
+live rendering prompt; Express must implement the corresponding protected rule
+in its policy composer before production rendering changes.
+
+For all furniture types, preserve source shape, proportions, existing cushions,
+seams and visible structural details. Do not invent absent arms, legs, cushions,
+decorative pillows, throws or bedding. Preserve existing features; do not remove
+them under the no-additions rule. Keep the exact source viewpoint and orientation.
+Only the structured `addBedding` option may authorize adding a mattress, white
+sheets and pillows, without changing furniture structure. When disabled, add no
+bedding. Employee instructions cannot override these protected requirements.
+
+Backend handoff: update the canonical policy, increment its version, and test
+the bedding exception and conflicting supplemental instructions. New jobs and
+explicit new adjustment revisions should receive the new policy. Do not rewrite
+historical snapshots or trigger generation. No sofa-specific checkbox or API
+schema change is needed. Deploy/restart Express separately; deploying this
+Shopify app alone does not activate the new rendering policy.
