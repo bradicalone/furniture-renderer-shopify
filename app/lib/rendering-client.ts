@@ -3,7 +3,7 @@ export class RenderingClientError extends Error {
   constructor(status: number, message: string) { super(message); this.status = status; }
 }
 
-export async function renderingCall<T>(input: Record<string, unknown>, signal?: AbortSignal): Promise<T> {
+export async function renderingCall<T>(input: Record<string, unknown>, signal?: AbortSignal, endpoint: '/app/api/rendering' | '/app/api/rendering-sources' = '/app/api/rendering'): Promise<T> {
   // App Bridge normally intercepts fetch. Explicitly await its token here so
   // resource requests do not depend on implicit interception timing.
   const bridge = typeof window === 'undefined' ? undefined
@@ -16,7 +16,7 @@ export async function renderingCall<T>(input: Record<string, unknown>, signal?: 
   catch { throw new Error('Could not obtain a Shopify session token. Reopen Furniture Renderer from Shopify Admin.'); }
   let response: Response;
   try {
-    response = await fetch('/app/api/rendering', {
+    response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(input), signal,

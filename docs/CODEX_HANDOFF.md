@@ -155,3 +155,46 @@ explicit new adjustment revisions should receive the new policy. Do not rewrite
 historical snapshots or trigger generation. No sofa-specific checkbox or API
 schema change is needed. Deploy/restart Express separately; deploying this
 Shopify app alone does not activate the new rendering policy.
+
+### CSV saved-angle review (2026-10-27)
+
+Implemented a separate review mode on New rendering job; original folder upload
+and proof-first submission remain unchanged. CSV parsing is local (1 MiB / 250
+rows), requires Product Name, Target Variant SKU, Color Code and Fabric Folder,
+and rejects duplicate SKUs and ambiguous CSV. Optional Source Product Code,
+Furniture Folder and Rendering Instructions are retained for review.
+
+Authenticated `/app/api/rendering-sources` resolves an exact, unambiguous SKU
+against the current shop using Admin GraphQL, then reads the existing
+`/api/cylindo-images/:sku` endpoint on the configured rendering API origin. It
+never forwards service tokens to that separate route. The current backend code
+exposes that lookup without rendering-service authentication; confirm this
+contract and cross-shop asset permissions before wider rollout. Production
+connectivity has not been tested. Preview URLs are allowlisted to the existing
+Azure account/container, are not persisted, and can be refreshed explicitly.
+
+Employees choose their fabrics directory, review Shopify options against the
+explicit color code, select frames 1–32 (defaults 1,3,5,9,17), and supply local
+missing/replacement files. Nothing uploads during review. Errors are not treated
+as missing frames; only a real 404 produces an empty saved-angle list.
+Confirmation is local only. CSV job submission is intentionally unavailable.
+
+Required Express work before submission can be enabled:
+- Add an authenticated, shop-scoped saved-source resolver/import contract, using
+  stable SKU/frame identifiers plus immutable version/checksum provenance.
+- Explicitly permit selected Cylindo assets to act as furniture sources; they
+  currently have comparison role. Resolve private blobs server-side, not via
+  stored expiring SAS URLs or browser-provided blob paths.
+- Support mixing those sources with verified uploaded missing angles and
+  preserve explicit frame/order metadata and selected first-proof source.
+- Persist per-combination target variant SKU, Shopify IDs, color code and fabric
+  mapping. Validate matches server-side and reject changed assets or mappings
+  rather than silently substituting. Keep current proof-first behavior.
+- Define whether fallback to a different source SKU is supported. Current UI
+  only queries the full target SKU; Source Product Code is not used to guess it.
+- Return updated OpenAPI schema, permission rules and idempotency behavior.
+- No Shopify media publishing: future publication is to the product-image API.
+
+After that contract is deployed, connect confirmation to signed uploads and job
+creation, carrying verified mappings through the server. Do not route CSV drafts
+through the old manifest builder: it would discard target and frame metadata.

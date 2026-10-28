@@ -1,3 +1,4 @@
+import { ManifestReview } from '../components/ManifestReview';
 import { BulkSubmission } from "../components/BulkSubmission";
 import { useRef, useState } from "react";
 import type { DragEvent } from "react";
@@ -14,6 +15,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export default function RenderWorkspace() {
+  const [mode, setMode] = useState<'folder' | 'csv'>('folder');
   const [manifest, setManifest] = useState<FolderManifest | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -67,32 +69,37 @@ export default function RenderWorkspace() {
   return (
     <s-page heading="New rendering job" inlineSize="large">
       <s-button slot="secondary-actions" href="/app">Back to jobs</s-button>
+      <p><button disabled={confirmed} onClick={()=>setMode('folder')} aria-pressed={mode==='folder'}>Original folder upload</button>{' '}<button disabled={confirmed} onClick={()=>setMode('csv')} aria-pressed={mode==='csv'}>CSV and saved-angle review</button></p>
+      {mode === 'csv' ? <ManifestReview/> : <>
       <s-section heading="1. Choose a parent folder">
         <p>Organize your images as shown below, then choose or drop the parent folder. Files stay on your device until you confirm and start uploading.</p>
         <div className={styles.folderGuide}>
           <h3>Folder structure and naming</h3>
           <pre className={styles.folderExample} aria-label="Example rendering job folder structure">{`rendering-job/
 ├── furniture/
-│   ├── mabel-king-bed__SKU12345/
-│   │   ├── 01-front.jpg
-│   │   ├── 02-left-three-quarter.jpg
-│   │   └── 03-detail-piping.jpg
-│   └── louise-queen-bed__SKU67890/
-│       ├── 01-front.jpg
-│       └── 02-side.jpg
+│   └── mabel-king-bed/
+│       ├── 01.jpg
+│       └── 02.jpg
 └── fabrics/
-    ├── linen-bisque/
+    ├── ALA/
     │   ├── reference-01.jpg
     │   └── reference-02.jpg
-    └── velvet-fawn/
+    ├── BSQ/
+    │   └── reference-01.jpg
+    └── BLN/
         └── reference-01.jpg`}</pre>
           <ul>
-            <li><strong>Furniture folders:</strong> <code>product-title__SKU</code> — title first, then two underscores and the actual SKU. Replace the example titles and SKUs with your own; preserve the SKU exactly.</li>
-            <li><strong>Angle files:</strong> <code>01-front.jpg</code>, <code>02-left-three-quarter.jpg</code>, and so on. Use two-digit numbering and a descriptive angle or detail name. Include all your angles; you choose the first proof during review.</li>
-            <li><strong>Fabric folders:</strong> use a consistent fabric-and-color name, such as <code>linen-bisque</code>. Number references <code>reference-01.jpg</code>, <code>reference-02.jpg</code>, and so on.</li>
-            <li><strong>Parent folder:</strong> choose the whole <code>rendering-job</code> folder, containing both <code>furniture</code> and <code>fabrics</code>. The parent folder can have any name.</li>
+            <li><strong>Furniture folders:</strong> use the product name and size, such as <code>mabel-king-bed</code>. The same source angles can be used with multiple fabrics.</li>
+            <li><strong>Angle files:</strong> start with a two-digit order number: <code>01.jpg</code>, <code>02.jpg</code>, and so on. Descriptions are optional, such as <code>01-front.jpg</code>. You choose the first proof during review.</li>
+            <li><strong>Fabric folders:</strong> use the exact color code, such as <code>ALA</code>, <code>BSQ</code> or <code>BLN</code>. Put all reference photos for that fabric inside its folder. Reuse a folder only when the material and color are the same.</li>
+            <li><strong>Parent folder:</strong> choose the whole folder containing both <code>furniture</code> and <code>fabrics</code>. The parent folder can have any name.</li>
           </ul>
-          <p>This naming convention helps organize your files. Automatic SKU matching and Shopify publishing are not connected yet.</p>
+          <p>For current uploads, include furniture photos and select the fabrics for each item during review. Naming is guidance; SKU matching and Shopify publishing are not connected yet.</p>
+          <details>
+            <summary>Planned spreadsheet and saved-angle workflow</summary>
+            <p>The planned <code>rendering-manifest.csv</code> will have one row per target variant, with matching Color Code and Fabric Folder values. For example: <code>MFRN3456-BSQ-K → BSQ → fabrics/BSQ/</code>.</p>
+            <p>Saved database angles will be available for confirmation, with uploads for missing requested angles. Until this is connected, keep the CSV outside the folder you upload and include furniture photos.</p>
+          </details>
         </div>
         <div className={styles.dropArea} onDragOver={event => event.preventDefault()} onDrop={drop}>
           <strong>Drop your rendering-job folder here</strong>
@@ -171,6 +178,7 @@ export default function RenderWorkspace() {
 
         </s-section>}
         {confirmed && <BulkSubmission draft={{manifest, assignments, comparisons, firstProofs, jobInstructions, furnitureInstructions, background: background as 'white' | 'transparent', shadows, beds}} />}
+      </>}
       </>}
     </s-page>
   );
