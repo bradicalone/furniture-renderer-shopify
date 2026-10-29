@@ -192,3 +192,60 @@
   color: #616161;
   font-size: 13px;
 }
+
+.manifestFieldset {
+  display: grid;
+  gap: 20px;
+  min-inline-size: 0;
+  border: 0;
+  padding: 0;
+  margin-block: 20px;
+}
+
+.manifestFieldset > legend {
+  font-weight: 650;
+  padding-block: 12px;
+}
+
+.filePicker {
+  display: grid;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.filePicker input {
+  max-width: 100%;
+  font: inherit;
+  font-weight: 400;
+}
+
+.filePicker input::file-selector-button {
+  padding: 8px 14px;
+  margin-inline-end: 10px;
+  border: 1px solid #858d78;
+  border-radius: 6px;
+  background: #f2f4ef;
+  color: #303030;
+  cursor: pointer;
+}
+
+.columnGuide {
+  overflow-x: auto;
+  margin-block: 12px;
+}
+
+.columnGuide table {
+  border-collapse: collapse;
+  width: 100%;
+  text-align: start;
+}
+
+.columnGuide th,
+.columnGuide td {
+  border: 1px solid #d8d8d8;
+  padding: 10px;
+}
+
+.columnGuide th {
+  background: #f2f4ef;
+}

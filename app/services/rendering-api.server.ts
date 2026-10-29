@@ -50,6 +50,15 @@ export async function renderingRequest<T>(shop: string, path: string, body?: unk
       if (/^[a-z_]{1,80}$/.test(error?.error?.code)) code = error.error.code;
       if (response.status === 422 && code === 'invalid_upload' && safeUploadMessages.has(error?.error?.message)) detail = ` ${error.error.message}`;
     } catch { /* Do not expose proxy/provider bodies. */ }
+    const sourceHints:Record<string,string> = {
+      source_forbidden:' Ask an operator to review source and target catalog grants for this shop.',
+      source_version_changed:' Resolve fresh versions, review the images again and start a new confirmed submission.',
+      invalid_target_mapping:' Check target variant IDs, color code and source geometry against the reviewed catalog.',
+      source_lookup_failed:' Source lookup is unavailable; this does not mean angles are missing.',
+      source_unavailable:' A saved source cannot be read; do not substitute it as a missing angle.',
+      source_integrity_failed:' Saved source integrity check failed. Contact the service administrator.',
+    };
+    detail ||= sourceHints[code] ?? '';
     throw new RenderingApiError(response.status, code, `Rendering request failed (${response.status}, ${code}).${detail}`);
   }
   try { return await response.json() as T; }

@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
-import type { BulkDraft } from '../lib/bulk-submission';
+import type { UploadSource, BulkDraft } from '../lib/bulk-submission';
 import { createManifest, draftFiles } from '../lib/bulk-submission';
 import { renderingCall } from '../lib/rendering-client';
-import type { CreateResponse, UploadResponse, VerifyResponse } from '../lib/rendering-types';
+import type { CreateRequest, CreateResponse, UploadResponse, VerifyResponse } from '../lib/rendering-types';
 
-export function BulkSubmission({ draft }: { draft: BulkDraft }) {
+type SubmissionProps = { draft: BulkDraft; files?: never; buildManifest?: never } | { draft?: never; files: UploadSource[]; buildManifest: (uploads: Map<string,string>) => CreateRequest };
+export function BulkSubmission({ draft, files: customFiles, buildManifest }: SubmissionProps) {
   const uploads = useRef(new Map<string, string>());
   const keys = useRef(new Map<string, string>());
   const jobKey = useRef(crypto.randomUUID());
@@ -21,7 +22,7 @@ export function BulkSubmission({ draft }: { draft: BulkDraft }) {
     if (active.current) return;
     active.current = true; setError(''); setState('uploading');
     try {
-      const files = draftFiles(draft);
+      const files = customFiles ?? draftFiles(draft!);
       for (const source of files) {
         if (source.file.size <= 0 || source.file.size > 20 * 1024 * 1024) throw new Error(`${source.relativePath}: images must be between 1 byte and 20 MiB.`);
       }
@@ -51,7 +52,7 @@ export function BulkSubmission({ draft }: { draft: BulkDraft }) {
     if (active.current || !paid) return;
     active.current = true; setState('creating'); setError('');
     try {
-      const result = await renderingCall<CreateResponse>({operation:'create', key:jobKey.current, body:createManifest(draft, uploads.current)}, abort.current.signal);
+      const result = await renderingCall<CreateResponse>({operation:'create', key:jobKey.current, body:buildManifest ? buildManifest(uploads.current) : createManifest(draft!, uploads.current)}, abort.current.signal);
       setJob(result.id); setState('created');
     } catch (error) { setError(error instanceof Error ? error.message : 'Job creation failed.'); setState('verified'); }
     finally { active.current = false; }

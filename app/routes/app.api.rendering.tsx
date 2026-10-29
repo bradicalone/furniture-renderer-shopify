@@ -28,6 +28,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('Invalid request.');
     if (input.operation === 'create') {
       if (!input.body || typeof input.body !== 'object' || Array.isArray(input.body)) throw new Error('Invalid manifest.');
+      if (Array.isArray(input.body.furniture) && input.body.furniture.some((item: {sourceVariantSku?:string;sources?:{sourceId?:string}[]}) => item.sourceVariantSku || item.sources?.some(source=>source.sourceId)) && process.env.RENDERING_CSV_SUBMISSION_ENABLED !== 'true') return json({error:{code:'csv_not_enabled',message:'CSV submission is disabled until backend migration and catalog grants are confirmed.'}},503);
       // Never forward an identity supplied by the browser.
       delete input.body.createdBy;
       const user = session.onlineAccessInfo?.associated_user;

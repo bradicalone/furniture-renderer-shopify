@@ -107,10 +107,11 @@ export default function JobDetail() {
         const failureIds = currentTasks.filter(task => task.state === 'failed').map(task => task.id);
         const field = `${combination.id}:${combination.currentRevision}`;
         return <s-section key={combination.id} heading={`${furniture?.name ?? combination.furnitureId} / ${fabric?.name ?? combination.fabricId}`}>
+          {combination.target && <p>Target SKU: {combination.target.variantSku} · Color: {combination.target.colorCode}</p>}
           <p>Revision {combination.currentRevision} · {combination.approvedRevision === combination.currentRevision ? 'Approved' : 'Awaiting proof approval'}</p>
           <details><summary>Rendering instructions and settings</summary><p>Batch: {job.jobInstructions || 'None'}</p><p>Furniture: {furniture?.furnitureInstructions || 'None'}</p><p>{furniture?.options?.background} background · contact shadows: {furniture?.options?.addContactShadow ? 'yes' : 'no'} · bedding: {furniture?.options?.addBedding ? 'yes' : 'no'}</p><ul>{revision?.adjustments.map((text,index) => <li key={index}>{text || 'Re-render'}</li>)}</ul></details>
           {!proof && <p>Proof pending. Rendering progress is refreshed every five seconds.</p>}
-          {revision?.outputs.map(output => <OutputPreview key={output.id} jobId={jobId} outputId={output.id} label={`${output.kind}: ${output.relativePath}`} />)}
+          {[...(revision?.outputs ?? [])].sort((a,b) => {const ids=furniture?.sources.map(source=>'sourceId' in source?source.sourceId:source.uploadId)??[];return ids.indexOf(a.sourceId)-ids.indexOf(b.sourceId);}).map(output => <OutputPreview key={output.id} jobId={jobId} outputId={output.id} label={`${output.kind}: ${output.relativePath}`} />)}
           {!!furniture?.comparisons?.length && <details><summary>Cylindo comparisons (not rendering inputs)</summary>{furniture.comparisons.map(source => <OutputPreview key={source.uploadId} jobId={jobId} uploadId={source.uploadId} label={source.relativePath} />)}</details>}
           {!!proof && !job.cancelled && !job.archivedAt && <fieldset id={`review-${combination.id}`} className={styles.proofReview} disabled={busy}>
             <legend>Review current proof</legend>

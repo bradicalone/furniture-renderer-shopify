@@ -8,6 +8,8 @@ export function renderingOperation(input: Record<string, unknown>) {
   const combo = () => `${job()}/combinations/${uuid(input.combinationId)}`;
   const payload = input.body ?? {};
   switch (input.operation) {
+    case 'resolveSources': return { path: '/sources/cylindo/resolve', body: payload, mutation: true };
+    case 'savedSource': return { path: `/sources/${uuid(input.sourceId)}/download`, body: undefined, mutation: false };
     case 'upload': return { path: '/uploads', body: payload, mutation: true };
     case 'verify': return { path: `/uploads/${uuid(input.uploadId)}/verify`, body: {}, mutation: false };
     case 'create': return { path: '/jobs', body: payload, mutation: true };

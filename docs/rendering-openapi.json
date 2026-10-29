@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Furniture Rendering Bulk Backend",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "description": "Service-to-service bulk API using private Azure Blob Storage. Upload URLs are 15-minute HTTPS blob-scoped write SAS; PUT raw bytes with the returned Content-Type and x-ms-blob-type: BlockBlob headers, then verify. Download URLs are fresh 15-minute read-only SAS. Persist resource IDs, never SAS URLs. Request uploads only after folder confirmation. Relative paths must not contain empty, dot, dot-dot, backslash or control-character segments. See rendering-backend.md for cross-field constraints and examples."
   },
   "servers": [
@@ -11,6 +11,264 @@
     }
   ],
   "paths": {
+    "/sources/cylindo/resolve": {
+      "post": {
+        "operationId": "resolveSources",
+        "security": [
+          {
+            "serviceBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Rendering-Shop",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9-]*\\.myshopify\\.com$"
+            },
+            "description": "Set by the calling app server from its authenticated Shopify session."
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/resolveSourcesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Safe actionable error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Safe actionable error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Safe actionable error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Safe actionable error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Safe actionable error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Safe actionable error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Safe actionable error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Safe actionable error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Resolve full source SKU and unique frame numbers in requested order. Requires explicit shop-scoped catalog grants. Missing rows appear in missingFrames; lookup/storage failures return 503 source_lookup_failed/source_unavailable, changed bytes return 409 source_version_changed. Pins immutable private PNG sources without queuing rendering. Same key replays the original resolution; use a fresh key after source changes. See rendering-cylindo-sources.md.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/resolveSourcesRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sources/{sourceId}/download": {
+      "get": {
+        "operationId": "sourceDownload",
+        "security": [
+          {
+            "serviceBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Rendering-Shop",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9-]*\\.myshopify\\.com$"
+            },
+            "description": "Set by the calling app server from its authenticated Shopify session."
+          },
+          {
+            "name": "sourceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sourceDownloadResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Safe actionable error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Safe actionable error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Safe actionable error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Safe actionable error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Safe actionable error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Safe actionable error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Safe actionable error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Safe actionable error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Authorize the resolved source in this shop and mint a fresh 15-minute read-only SAS for its pinned PNG. Returns 404 source_not_found for unknown/foreign IDs and 403 source_forbidden for revoked catalog access. Never persist the URL."
+      }
+    },
     "/uploads": {
       "post": {
         "operationId": "upload",
@@ -521,6 +779,7 @@
             }
           }
         },
+        "description": "Queues one proof per furniture/fabric combination immediately. Remaining angles require approval. Catalog furniture requires sourceVariantSku, unique frame numbers, and a target variant mapping per combination. Sources array preserves frame order; firstProofSourceId may identify a saved source or verified upload. Source versions and shop grants are checked before acceptance; changed versions return 409 source_version_changed. Invalid mappings return 422 invalid_source_mapping, invalid_frame_mapping or invalid_target_mapping. Same idempotency key/body replays the original job. See rendering-cylindo-sources.md for mixed-source examples and cross-field rules.",
         "requestBody": {
           "required": true,
           "content": {
@@ -1856,6 +2115,33 @@
         ],
         "additionalProperties": false
       },
+      "resolveSourcesRequest": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "sourceVariantSku": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "frames": {
+            "minItems": 1,
+            "maxItems": 32,
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 32
+            }
+          }
+        },
+        "required": [
+          "sourceVariantSku",
+          "frames"
+        ],
+        "additionalProperties": false
+      },
       "createRequest": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -1919,28 +2205,74 @@
                   "minLength": 1,
                   "maxLength": 1024
                 },
+                "sourceVariantSku": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "pattern": "^[A-Za-z0-9_-]+$"
+                },
                 "sources": {
                   "minItems": 1,
                   "type": "array",
                   "items": {
-                    "type": "object",
-                    "properties": {
-                      "uploadId": {
-                        "type": "string",
-                        "format": "uuid",
-                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "uploadId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "relativePath": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1024
+                          },
+                          "frame": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 32
+                          }
+                        },
+                        "required": [
+                          "uploadId",
+                          "relativePath"
+                        ],
+                        "additionalProperties": false
                       },
-                      "relativePath": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 1024
+                      {
+                        "type": "object",
+                        "properties": {
+                          "sourceId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "sourceVersion": {
+                            "type": "string",
+                            "pattern": "^[a-f0-9]{64}$"
+                          },
+                          "frame": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 32
+                          },
+                          "relativePath": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1024
+                          }
+                        },
+                        "required": [
+                          "sourceId",
+                          "sourceVersion",
+                          "frame",
+                          "relativePath"
+                        ],
+                        "additionalProperties": false
                       }
-                    },
-                    "required": [
-                      "uploadId",
-                      "relativePath"
-                    ],
-                    "additionalProperties": false
+                    ]
                   }
                 },
                 "firstProofSourceId": {
@@ -2089,6 +2421,37 @@
                   "type": "string",
                   "minLength": 1,
                   "maxLength": 200
+                },
+                "target": {
+                  "type": "object",
+                  "properties": {
+                    "variantSku": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "pattern": "^[A-Za-z0-9_-]+$"
+                    },
+                    "productId": {
+                      "type": "string",
+                      "pattern": "^gid:\\/\\/shopify\\/Product\\/\\d+$"
+                    },
+                    "variantId": {
+                      "type": "string",
+                      "pattern": "^gid:\\/\\/shopify\\/ProductVariant\\/\\d+$"
+                    },
+                    "colorCode": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    }
+                  },
+                  "required": [
+                    "variantSku",
+                    "productId",
+                    "variantId",
+                    "colorCode"
+                  ],
+                  "additionalProperties": false
                 }
               },
               "required": [
@@ -2191,6 +2554,143 @@
             ]
           }
         },
+        "additionalProperties": false
+      },
+      "resolveSourcesResponse": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "sourceVariantSku": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "sourceId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "sourceVersion": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                "sourceVariantSku": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "pattern": "^[A-Za-z0-9_-]+$"
+                },
+                "frame": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 32
+                },
+                "relativePath": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1024
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                "normalizedSha256": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                "width": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "height": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "contentType": {
+                  "type": "string",
+                  "const": "image/png"
+                },
+                "productCode": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "colorCode": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                }
+              },
+              "required": [
+                "sourceId",
+                "sourceVersion",
+                "sourceVariantSku",
+                "frame",
+                "relativePath",
+                "sha256",
+                "normalizedSha256",
+                "width",
+                "height",
+                "contentType",
+                "productCode",
+                "colorCode"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "missingFrames": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 32
+            }
+          }
+        },
+        "required": [
+          "sourceVariantSku",
+          "sources",
+          "missingFrames"
+        ],
+        "additionalProperties": false
+      },
+      "sourceDownloadResponse": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "sourceId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "contentType": {
+            "type": "string",
+            "const": "image/png"
+          }
+        },
+        "required": [
+          "sourceId",
+          "url",
+          "expiresAt",
+          "contentType"
+        ],
         "additionalProperties": false
       },
       "uploadResponse": {
@@ -2763,28 +3263,74 @@
                   "minLength": 1,
                   "maxLength": 1024
                 },
+                "sourceVariantSku": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "pattern": "^[A-Za-z0-9_-]+$"
+                },
                 "sources": {
                   "minItems": 1,
                   "type": "array",
                   "items": {
-                    "type": "object",
-                    "properties": {
-                      "uploadId": {
-                        "type": "string",
-                        "format": "uuid",
-                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "uploadId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "relativePath": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1024
+                          },
+                          "frame": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 32
+                          }
+                        },
+                        "required": [
+                          "uploadId",
+                          "relativePath"
+                        ],
+                        "additionalProperties": false
                       },
-                      "relativePath": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 1024
+                      {
+                        "type": "object",
+                        "properties": {
+                          "sourceId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "sourceVersion": {
+                            "type": "string",
+                            "pattern": "^[a-f0-9]{64}$"
+                          },
+                          "frame": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 32
+                          },
+                          "relativePath": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1024
+                          }
+                        },
+                        "required": [
+                          "sourceId",
+                          "sourceVersion",
+                          "frame",
+                          "relativePath"
+                        ],
+                        "additionalProperties": false
                       }
-                    },
-                    "required": [
-                      "uploadId",
-                      "relativePath"
-                    ],
-                    "additionalProperties": false
+                    ]
                   }
                 },
                 "firstProofSourceId": {
@@ -3050,6 +3596,37 @@
                   "type": "string",
                   "minLength": 1,
                   "maxLength": 200
+                },
+                "target": {
+                  "type": "object",
+                  "properties": {
+                    "variantSku": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "pattern": "^[A-Za-z0-9_-]+$"
+                    },
+                    "productId": {
+                      "type": "string",
+                      "pattern": "^gid:\\/\\/shopify\\/Product\\/\\d+$"
+                    },
+                    "variantId": {
+                      "type": "string",
+                      "pattern": "^gid:\\/\\/shopify\\/ProductVariant\\/\\d+$"
+                    },
+                    "colorCode": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    }
+                  },
+                  "required": [
+                    "variantSku",
+                    "productId",
+                    "variantId",
+                    "colorCode"
+                  ],
+                  "additionalProperties": false
                 },
                 "currentRevision": {
                   "type": "integer",

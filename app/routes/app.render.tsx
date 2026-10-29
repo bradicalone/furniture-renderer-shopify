@@ -2,6 +2,7 @@ import { ManifestReview } from '../components/ManifestReview';
 import { BulkSubmission } from "../components/BulkSubmission";
 import { useRef, useState } from "react";
 import type { DragEvent } from "react";
+import { useLoaderData } from 'react-router';
 import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
@@ -11,10 +12,11 @@ import styles from "../styles/render-workspace.module.css";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
-  return null;
+  return {csvEnabled:process.env.RENDERING_CSV_SUBMISSION_ENABLED === 'true'};
 };
 
 export default function RenderWorkspace() {
+  const {csvEnabled}=useLoaderData<typeof loader>();
   const [mode, setMode] = useState<'folder' | 'csv'>('folder');
   const [manifest, setManifest] = useState<FolderManifest | null>(null);
   const [busy, setBusy] = useState(false);
@@ -70,7 +72,7 @@ export default function RenderWorkspace() {
     <s-page heading="New rendering job" inlineSize="large">
       <s-button slot="secondary-actions" href="/app">Back to jobs</s-button>
       <p><button disabled={confirmed} onClick={()=>setMode('folder')} aria-pressed={mode==='folder'}>Original folder upload</button>{' '}<button disabled={confirmed} onClick={()=>setMode('csv')} aria-pressed={mode==='csv'}>CSV and saved-angle review</button></p>
-      {mode === 'csv' ? <ManifestReview/> : <>
+      {mode === 'csv' ? <ManifestReview enabled={csvEnabled}/> : <>
       <s-section heading="1. Choose a parent folder">
         <p>Organize your images as shown below, then choose or drop the parent folder. Files stay on your device until you confirm and start uploading.</p>
         <div className={styles.folderGuide}>
@@ -96,9 +98,9 @@ export default function RenderWorkspace() {
           </ul>
           <p>For current uploads, include furniture photos and select the fabrics for each item during review. Naming is guidance; SKU matching and Shopify publishing are not connected yet.</p>
           <details>
-            <summary>Planned spreadsheet and saved-angle workflow</summary>
-            <p>The planned <code>rendering-manifest.csv</code> will have one row per target variant, with matching Color Code and Fabric Folder values. For example: <code>MFRN3456-BSQ-K → BSQ → fabrics/BSQ/</code>.</p>
-            <p>Saved database angles will be available for confirmation, with uploads for missing requested angles. Until this is connected, keep the CSV outside the folder you upload and include furniture photos.</p>
+            <summary>Spreadsheet and saved-angle workflow</summary>
+            <p>The <code>rendering-manifest.csv</code> has one row per target variant, with matching Color Code and Fabric Folder values. For example: <code>MFRN3456-BSQ-K → BSQ → fabrics/BSQ/</code>.</p>
+            <p>Use CSV and saved-angle review above to select saved frames and upload missing angles. Keep CSV files outside folders submitted through the original folder workflow.</p>
           </details>
         </div>
         <div className={styles.dropArea} onDragOver={event => event.preventDefault()} onDrop={drop}>

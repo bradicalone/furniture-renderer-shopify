@@ -1,4 +1,4 @@
-export type ManifestRow = { productName:string; sourceProductCode:string; sku:string; color:string; fabricFolder:string; furnitureFolder:string; instructions:string };
+export type ManifestRow = { productName:string; sourceProductCode:string; sourceVariantSku?:string; sku:string; color:string; fabricFolder:string; furnitureFolder:string; instructions:string };
 // RFC-style quoted fields, escaped quotes, CRLF and multiline values.
 export function parseRenderingManifest(text:string): ManifestRow[] {
   if (text.length > 1024 * 1024) throw new Error('CSV must be under 1 MiB.');
@@ -25,12 +25,13 @@ export function parseRenderingManifest(text:string): ManifestRow[] {
   return records.map((r,index)=>{
     if(r.length!==headers.length)throw new Error(`Row ${index+2}: column count does not match header.`);
     const get=(h:string)=>r[headers.indexOf(h)]??'';
-    const value={productName:get('productname'),sourceProductCode:get('sourceproductcode'),sku:get('targetvariantsku'),color:get('colorcode'),fabricFolder:get('fabricfolder'),furnitureFolder:get('furniturefolder'),instructions:get('renderinginstructions')};
-    if(!value.productName || !value.color || !value.fabricFolder || !/^[A-Za-z0-9._-]{1,120}$/.test(value.sku))throw new Error(`Row ${index+2}: product, exact variant SKU, color and fabric folder are required.`);
+    const value={productName:get('productname'),sourceProductCode:get('sourceproductcode'),sku:get('targetvariantsku'),sourceVariantSku:get('sourcevariantsku')||get('targetvariantsku'),color:get('colorcode'),fabricFolder:get('fabricfolder'),furnitureFolder:get('furniturefolder'),instructions:get('renderinginstructions')};
+    if(!value.productName || !value.color || !value.fabricFolder || !/^[A-Za-z0-9_-]{1,200}$/.test(value.sku))throw new Error(`Row ${index+2}: product, exact variant SKU, color and fabric folder are required.`);
     for(const folder of [value.fabricFolder,value.furnitureFolder])if(folder && (/[\\/]/.test(folder)||folder==='.'||folder==='..'))throw new Error(`Row ${index+2}: use a folder name, not a path.`);
+    if(!/^[A-Za-z0-9_-]{1,200}$/.test(value.sourceVariantSku))throw new Error(`Row ${index+2}: invalid source SKU.`);
     if(value.instructions.length>4000)throw new Error(`Row ${index+2}: instructions exceed 4000 characters.`);
     if(seen.has(value.sku))throw new Error(`Duplicate target SKU: ${value.sku}`);seen.add(value.sku);
     return value;
   });
 }
-export type AngleLookup = {variant:{id:string;sku:string;title:string;selectedOptions:{name:string;value:string}[]}; images:{frame:number;url:string;expiresAt:string;color:string}[]};
+export type AngleLookup = {variant:{id:string;sku:string;title:string;product:{id:string};selectedOptions:{name:string;value:string}[]}; images:{frame:number;url:string;expiresAt:string;color:string}[]};

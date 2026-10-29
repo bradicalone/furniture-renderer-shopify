@@ -198,3 +198,36 @@ Required Express work before submission can be enabled:
 After that contract is deployed, connect confirmation to signed uploads and job
 creation, carrying verified mappings through the server. Do not route CSV drafts
 through the old manifest builder: it would discard target and frame metadata.
+
+### API v1.3 frontend connection (2026-10-28)
+
+Supersedes the review-only/source-contract blockers above. Attached contract is
+saved as `rendering-cylindo-sources.md`; wire types regenerated from its OpenAPI.
+CSV review now resolves via authenticated `POST /sources/cylindo/resolve` with
+idempotency keys and obtains pinned previews via `/sources/:id/download`.
+The public Cylindo endpoint is no longer used. Shopify lookup only confirms the
+exact target SKU and its IDs/options in the authenticated shop. Optional CSV
+`Source Variant SKU` defaults to the target SKU; product code is never used to
+construct or guess a SKU. Backend grants independently validate target color,
+source geometry and ownership.
+
+Employees specify ordered frame numbers and a selected first-proof frame, review
+fabric references and Shopify options, set bedding per row plus batch background,
+shadows and instructions, and confirm all rows before local uploads. Submission
+uses existing signed upload/verify endpoints for local missing/replacement angles
+and fabrics only, then a mixed-source manifest. Saved refs contain exactly
+sourceId, sourceVersion, frame and relativePath. Signed URLs exist only in preview
+state. Each combination carries target variant SKU/GIDs/color/fabric mapping.
+The existing proof-first behavior remains. Details display outputs by manifest
+source order, not worker completion order. Resolver retry reuses a key; explicit
+fresh resolution uses a new key. Confirmed submissions are locked and creation
+retries reuse their key and body. A changed source version requires fresh review
+and a new submission, never silently replacing a pinned selection.
+
+DEPLOYMENT GATE: CSV creation is disabled by default on BOTH UI and app server.
+Only after the operator confirms backend v1.3 deployment, migration 005, reviewed
+shop-scoped source/target catalog grants, and resolver smoke checks, set the
+Shopify app runtime `RENDERING_CSV_SUBMISSION_ENABLED=true` and redeploy. This is
+an app-side rollout flag, not a new Express requirement. No such confirmation or
+production verification has been performed here. Original upload-only jobs remain
+available. Never bypass the gate using browser input.
