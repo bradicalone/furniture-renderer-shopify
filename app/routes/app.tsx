@@ -1,3 +1,5 @@
+import {deploymentConfig,assertDeploymentShop} from '../services/deployment.server';
+import {StorageContext} from '../lib/storage-context';
 import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
 import { Outlet, useLoaderData, useRouteError } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
@@ -6,18 +8,22 @@ import { AppProvider } from "@shopify/shopify-app-react-router/react";
 import { authenticate } from "../shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  await authenticate.admin(request);
+  const {session}=await authenticate.admin(request);
+  assertDeploymentShop(session.shop);
 
   // eslint-disable-next-line no-undef
-  return { apiKey: process.env.SHOPIFY_API_KEY || "" };
+  return { apiKey: process.env.SHOPIFY_API_KEY || "", ...deploymentConfig() };
 };
 
 export default function App() {
-  const { apiKey } = useLoaderData<typeof loader>();
+  const { apiKey, staging, storage } = useLoaderData<typeof loader>();
 
   return (
     <AppProvider embedded apiKey={apiKey}>
-      <Outlet />
+      <StorageContext.Provider value={storage}>
+        {staging && <div role="status" style={{background:"#fff4ce",color:"#573b00",padding:"12px 20px",fontWeight:600}}>STAGING — test store and test image storage</div>}
+        <Outlet />
+      </StorageContext.Provider>
     </AppProvider>
   );
 }

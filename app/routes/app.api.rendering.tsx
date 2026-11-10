@@ -1,3 +1,4 @@
+import {assertDeploymentShop} from '../services/deployment.server';
 import type { ActionFunctionArgs } from 'react-router';
 import { authenticate } from '../shopify.server';
 import { renderingOperation } from '../lib/rendering-gateway';
@@ -12,6 +13,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   try { context = await authenticate.admin(request); }
   catch (error) { log('authentication_failed', error instanceof Response ? error.status : 500); throw error; }
   const { session } = context;
+  assertDeploymentShop(session.shop);
   log('authentication_complete');
   const json = (value: unknown, status = 200) => Response.json(value, { status, headers: { 'Cache-Control': 'no-store' } });
   if (request.method !== 'POST') return json({ error: { message: 'POST required.' } }, 405);

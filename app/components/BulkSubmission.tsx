@@ -1,3 +1,5 @@
+import {useStoragePolicy} from '../lib/storage-context';
+import {validateStorageUrl} from '../lib/storage-policy';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import type { UploadSource, BulkDraft } from '../lib/bulk-submission';
@@ -7,6 +9,7 @@ import type { CreateRequest, CreateResponse, UploadResponse, VerifyResponse } fr
 
 type SubmissionProps = { draft: BulkDraft; files?: never; buildManifest?: never } | { draft?: never; files: UploadSource[]; buildManifest: (uploads: Map<string,string>) => CreateRequest };
 export function BulkSubmission({ draft, files: customFiles, buildManifest }: SubmissionProps) {
+  const storage=useStoragePolicy();
   const uploads = useRef(new Map<string, string>());
   const keys = useRef(new Map<string, string>());
   const jobKey = useRef(crypto.randomUUID());
@@ -36,8 +39,8 @@ export function BulkSubmission({ draft, files: customFiles, buildManifest }: Sub
         let key = keys.current.get(source.relativePath);
         if (!key) { key = crypto.randomUUID(); keys.current.set(source.relativePath, key); }
         const signed = await renderingCall<UploadResponse>({operation:'upload', key, body:{relativePath:source.relativePath, role:source.role, size:source.file.size, contentType, sha256}}, abort.current.signal);
-        const url = new URL(signed.upload.url);
-        if (url.protocol !== 'https:' || url.hostname !== 'uploads.blob.core.windows.net' || !url.pathname.startsWith('/renderes/')) throw new Error('Unexpected storage destination returned by server.');
+        const url = validateStorageUrl(signed.upload.url,storage);
+
         const result = await fetch(url, {method:'PUT', headers:signed.upload.headers, body:source.file, credentials:'omit', referrerPolicy:'no-referrer', signal:abort.current.signal});
         if (!result.ok) throw new Error(`Azure upload failed (${result.status}) for ${source.relativePath}. Retry uploads to refresh the signed URL.`);
         const verified = await renderingCall<VerifyResponse>({operation:'verify', uploadId:signed.uploadId}, abort.current.signal);

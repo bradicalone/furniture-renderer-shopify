@@ -1,3 +1,5 @@
+import {useStoragePolicy} from '../lib/storage-context';
+import {validateStorageUrl} from '../lib/storage-policy';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLoaderData } from 'react-router';
 import type { HeadersFunction, LoaderFunctionArgs } from 'react-router';
@@ -12,16 +14,16 @@ export const loader = async ({request, params}: LoaderFunctionArgs) => {
   return {jobId:params.jobId!};
 };
 function OutputPreview({jobId, outputId, label, uploadId}: {jobId: string; outputId?: string; uploadId?: string; label: string}) {
+  const storage=useStoragePolicy();
   const [url, setUrl] = useState('');
   const [error, setError] = useState('');
   const refresh = useCallback(async () => {
     try {
       const response = await renderingCall<DownloadResponse | UploadedFileResponse>(uploadId ? {operation:'source', uploadId} : {operation:'download', jobId, outputId});
-      const parsed = new URL(response.url);
-      if (parsed.protocol !== 'https:' || parsed.hostname !== 'uploads.blob.core.windows.net') throw new Error('Unexpected preview URL.');
+      validateStorageUrl(response.url,storage);
       setUrl(response.url); setError('');
     } catch (error) { setError(error instanceof Error ? error.message : 'Preview unavailable.'); }
-  }, [jobId, outputId, uploadId]);
+  }, [jobId, outputId, uploadId, storage]);
   useEffect(() => { const first = setTimeout(() => void refresh(), 0); const timer = setInterval(() => void refresh(), 10 * 60 * 1000); return () => { clearTimeout(first); clearInterval(timer); }; }, [refresh]);
   return <figure>
     {url && <><img src={url} alt={label} referrerPolicy="no-referrer" style={{maxWidth:'100%', maxHeight:400}} onError={() => setError('Preview expired or unavailable. Refresh the image.')} /><p><a href={url} target="_blank" rel="noreferrer">Open / download image</a></p></>}

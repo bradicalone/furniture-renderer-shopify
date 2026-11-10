@@ -1,0 +1,70 @@
+# Fill runtime credentials and configure database permissions/network access before deployment.
+name: furniture-renderer-staging
+region: sfo
+alerts:
+  - rule: DEPLOYMENT_FAILED
+  - rule: DOMAIN_FAILED
+ingress:
+  rules:
+    - component:
+        name: furniture-renderer-staging
+      match:
+        path:
+          prefix: /
+services:
+  - name: furniture-renderer-staging
+    github:
+      repo: bradicalone/furniture-renderer-shopify
+      branch: main
+      deploy_on_push: false
+    source_dir: /
+    dockerfile_path: Dockerfile
+    http_port: 3000
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-1gb
+    envs:
+      - key: NODE_ENV
+        scope: RUN_TIME
+        value: production
+      - key: PORT
+        scope: RUN_TIME
+        value: "3000"
+      - key: DATABASE_URL
+        scope: RUN_TIME
+        type: SECRET
+        value: REPLACE_WITH_STAGING_SESSION_DATABASE_URL
+      - key: SHOPIFY_API_KEY
+        scope: RUN_TIME
+        value: REPLACE_WITH_STAGING_SHOPIFY_CLIENT_ID
+      - key: SHOPIFY_API_SECRET
+        scope: RUN_TIME
+        type: SECRET
+        value: REPLACE_IN_DIGITALOCEAN
+      - key: SHOPIFY_APP_URL
+        scope: RUN_TIME
+        value: ${APP_URL}
+      - key: SCOPES
+        scope: RUN_TIME
+        value: write_products
+      - key: RENDERING_API_URL
+        scope: RUN_TIME
+        value: https://REPLACE_WITH_STAGING_API_HOST/api/rendering/v1
+      - key: RENDERING_API_TOKEN
+        scope: RUN_TIME
+        type: SECRET
+        value: REPLACE_IN_DIGITALOCEAN
+      - key: APP_ENV
+        scope: RUN_TIME
+        value: staging
+      - key: STAGING_ALLOWED_SHOPS
+        scope: RUN_TIME
+        value: REPLACE_WITH_CANONICAL_TEST_STORE.myshopify.com
+      - key: RENDERING_STORAGE_ORIGIN
+        scope: RUN_TIME
+        value: https://REPLACE_WITH_STAGING_ACCOUNT.blob.core.windows.net
+      - key: RENDERING_STORAGE_CONTAINER
+        scope: RUN_TIME
+        value: renderes-staging
+      - key: RENDERING_CSV_SUBMISSION_ENABLED
+        scope: RUN_TIME
+        value: "false"

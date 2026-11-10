@@ -1,3 +1,5 @@
+import {useStoragePolicy} from '../lib/storage-context';
+import {validateStorageUrl} from '../lib/storage-policy';
 import {BulkSubmission} from './BulkSubmission';
 import {csvManifest,csvUploadFiles} from '../lib/csv-submission';
 import type {ReviewedVariant} from '../lib/csv-submission';
@@ -15,8 +17,9 @@ function LocalPreview({file}:{file:File}) {
   return <img src={url || undefined} alt={file.name} style={{maxWidth:200,maxHeight:200}}/>;
 }
 function SavedPreview({sourceId}:{sourceId:string}) {
+  const storage=useStoragePolicy();
   const [url,setUrl]=useState('');const [error,setError]=useState('');
-  const refresh=useCallback(async ()=>{try{const value=await renderingCall<SourceDownloadResponse>({operation:'savedSource',sourceId});const u=new URL(value.url);if(u.protocol!=='https:'||u.hostname!=='uploads.blob.core.windows.net'||!u.pathname.startsWith('/renderes/'))throw new Error('Invalid preview destination.');setUrl(value.url);setError('');}catch(e){setError(e instanceof Error?e.message:'Preview unavailable.');}},[sourceId]);
+  const refresh=useCallback(async ()=>{try{const value=await renderingCall<SourceDownloadResponse>({operation:'savedSource',sourceId});validateStorageUrl(value.url,storage);setUrl(value.url);setError('');}catch(e){setError(e instanceof Error?e.message:'Preview unavailable.');}},[sourceId,storage]);
   useEffect(()=>{const t=setTimeout(()=>void refresh(),0);return()=>clearTimeout(t);},[refresh]); // Preview URLs live only in component state.
   return <>{url&&<img src={url} referrerPolicy="no-referrer" alt="Resolved furniture source" style={{maxWidth:200,maxHeight:200}} onError={()=>setError('Preview expired. Refresh the link.')}/>}<button onClick={refresh}>Refresh source preview</button>{error&&<p role="alert">{error}</p>}</>;
 }
