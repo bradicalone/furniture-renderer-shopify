@@ -40,6 +40,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         if (displayName) input.body.createdBy = { shopifyUserId: userId, displayName };
       }
     }
+    if (['upload','create'].includes(input.operation) && input.body?.testMode === true && process.env.RENDERING_TEST_MODE_ENABLED !== 'true') return json({error:{code:'test_mode_disabled',message:'Test jobs are disabled until backend deployment and migration 008 are confirmed.'}},503);
     const operation = renderingOperation(input);
     if (operation.mutation && (typeof input.key !== 'string' || !/^[A-Za-z0-9._:-]{1,128}$/.test(input.key))) throw new Error('Idempotency key required.');
     log('backend_started');

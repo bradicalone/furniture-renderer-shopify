@@ -51,6 +51,9 @@ export async function renderingRequest<T>(shop: string, path: string, body?: unk
       if (response.status === 422 && code === 'invalid_upload' && safeUploadMessages.has(error?.error?.message)) detail = ` ${error.error.message}`;
     } catch { /* Do not expose proxy/provider bodies. */ }
     const sourceHints:Record<string,string> = {
+      upload_mode_mismatch:' Start a new job and upload all local files in the selected mode.',
+      test_storage_unavailable:' Test storage is unavailable. Contact the administrator; there is no production fallback.',
+      storage_destination_mismatch:' Stored image location does not match configuration. Contact the administrator.',
       source_forbidden:' Ask an operator to review source and target catalog grants for this shop.',
       source_version_changed:' Resolve fresh versions, review the images again and start a new confirmed submission.',
       invalid_target_mapping:' Check target variant IDs, color code and source geometry against the reviewed catalog.',

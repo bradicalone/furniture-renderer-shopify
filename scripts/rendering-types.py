@@ -7,6 +7,7 @@ def ts(s):
     if 'enum' in s: return ' | '.join(json.dumps(v) for v in s['enum'])
     if 'anyOf' in s: return ' | '.join(ts(v) for v in s['anyOf'])
     t=s.get('type')
+    if isinstance(t,list): return ' | '.join(ts({**s,'type':v}) for v in t)
     if t=='object':
         if not s.get('properties'): return 'Record<string, '+(ts(s['additionalProperties']) if isinstance(s.get('additionalProperties'),dict) else 'never')+'>'
         return '{ '+ '; '.join(json.dumps(k)+('' if k in s.get('required',[]) else '?')+': '+ts(v) for k,v in s.get('properties',{}).items())+' }'

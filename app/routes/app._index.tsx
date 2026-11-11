@@ -62,6 +62,7 @@ export default function Index() {
             <h3 id={`job-${job.id}`}><Link to={`/app/jobs/${job.id}`}>{job.name}</Link></h3>
             <span className={styles.jobStatus}>{job.status.replaceAll('_', ' ')}</span>
           </div>
+          <p><strong>{job.testMode ? 'Test job' : 'Production job'}</strong> · Storage: {job.storageDestination ?? 'production'}</p>
           <p>{job.progress.completed}/{job.progress.planned} outputs · {job.progress.failed} failed</p>
           <p>Created by: {job.createdBy?.displayName ?? 'Unknown'}</p>
           <div className={styles.jobDates}>

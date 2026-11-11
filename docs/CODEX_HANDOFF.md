@@ -231,3 +231,30 @@ Shopify app runtime `RENDERING_CSV_SUBMISSION_ENABLED=true` and redeploy. This i
 an app-side rollout flag, not a new Express requirement. No such confirmation or
 production verification has been performed here. Original upload-only jobs remain
 available. Never bypass the gate using browser input.
+
+### Test jobs / API 1.4 (2026-11-10)
+
+Separate staging provisioning is PAUSED. Production service/database/worker are
+shared; test files use private `renderes-test` on the configured Azure account.
+Contract: `rendering-test-mode.md`. The updated OpenAPI is checked in and the type
+generator handles nullable type arrays.
+
+Both folder and CSV submissions use the shared Test job control in Upload and
+submit. It defaults off, is available only with the app runtime flag
+`RENDERING_TEST_MODE_ENABLED=true`, and locks on the first upload attempt. To
+change mode afterward, start a new job with new uploads and idempotency keys.
+True is sent only on uploads and job creation; production requests omit it for
+backward compatibility. All file roles use the same locked mode. Verify and
+upload responses must match requested provenance before proceeding. Test URLs
+must use the exact configured account and `renderes-test`, with no fallback.
+Job list/detail show test mode and destination. Job output and comparison previews
+validate persisted backend provenance against the job mode. Saved-source resolver
+previews continue using the production source policy; copies happen server-side
+on job creation. Backend publication guards remain authoritative.
+
+Operator explicitly said deployment/migration/storage are NOT confirmed. Leave
+RENDERING_TEST_MODE_ENABLED unset/false in DigitalOcean until API 1.4, migration
+008, private renderes-test/CORS and authenticated smoke checks are confirmed.
+The app server also rejects test upload/create requests while disabled. Do not
+change production storage variables or APP_ENV. No cloud resources or generation
+were touched during frontend implementation.

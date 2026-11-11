@@ -1,3 +1,4 @@
+import {modeStorage,assertMode} from '../lib/test-mode';
 import {useStoragePolicy} from '../lib/storage-context';
 import {validateStorageUrl} from '../lib/storage-policy';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -13,17 +14,18 @@ export const loader = async ({request, params}: LoaderFunctionArgs) => {
   await authenticate.admin(request);
   return {jobId:params.jobId!};
 };
-function OutputPreview({jobId, outputId, label, uploadId}: {jobId: string; outputId?: string; uploadId?: string; label: string}) {
+function OutputPreview({jobId, outputId, label, uploadId, testMode=false}: {jobId: string; outputId?: string; uploadId?: string; label: string; testMode?:boolean}) {
   const storage=useStoragePolicy();
   const [url, setUrl] = useState('');
   const [error, setError] = useState('');
   const refresh = useCallback(async () => {
     try {
       const response = await renderingCall<DownloadResponse | UploadedFileResponse>(uploadId ? {operation:'source', uploadId} : {operation:'download', jobId, outputId});
-      validateStorageUrl(response.url,storage);
+      assertMode(response,testMode);
+      validateStorageUrl(response.url,modeStorage(storage,testMode));
       setUrl(response.url); setError('');
     } catch (error) { setError(error instanceof Error ? error.message : 'Preview unavailable.'); }
-  }, [jobId, outputId, uploadId, storage]);
+  }, [jobId, outputId, uploadId, storage, testMode]);
   useEffect(() => { const first = setTimeout(() => void refresh(), 0); const timer = setInterval(() => void refresh(), 10 * 60 * 1000); return () => { clearTimeout(first); clearInterval(timer); }; }, [refresh]);
   return <figure>
     {url && <><img src={url} alt={label} referrerPolicy="no-referrer" style={{maxWidth:'100%', maxHeight:400}} onError={() => setError('Preview expired or unavailable. Refresh the image.')} /><p><a href={url} target="_blank" rel="noreferrer">Open / download image</a></p></>}
@@ -87,6 +89,7 @@ export default function JobDetail() {
     {!job && <p role="status">Loading job…</p>}
     {job && <>
       <s-section heading="Progress">
+        <p><strong>{job.testMode ? 'Test job — not publishable' : 'Production job'}</strong> · Storage: {job.storageDestination ?? 'production'}</p>
         <p>Created by: {job.createdBy?.displayName ?? 'Unknown'}</p>
         {job.archivedAt && <p>This job is archived. Restore it from Archived jobs to enable actions.</p>}
         {awaitingReview.length > 0 && <div className={styles.approvalNotice} role="status">
@@ -113,8 +116,8 @@ export default function JobDetail() {
           <p>Revision {combination.currentRevision} · {combination.approvedRevision === combination.currentRevision ? 'Approved' : 'Awaiting proof approval'}</p>
           <details><summary>Rendering instructions and settings</summary><p>Batch: {job.jobInstructions || 'None'}</p><p>Furniture: {furniture?.furnitureInstructions || 'None'}</p><p>{furniture?.options?.background} background · contact shadows: {furniture?.options?.addContactShadow ? 'yes' : 'no'} · bedding: {furniture?.options?.addBedding ? 'yes' : 'no'}</p><ul>{revision?.adjustments.map((text,index) => <li key={index}>{text || 'Re-render'}</li>)}</ul></details>
           {!proof && <p>Proof pending. Rendering progress is refreshed every five seconds.</p>}
-          {[...(revision?.outputs ?? [])].sort((a,b) => {const ids=furniture?.sources.map(source=>'sourceId' in source?source.sourceId:source.uploadId)??[];return ids.indexOf(a.sourceId)-ids.indexOf(b.sourceId);}).map(output => <OutputPreview key={output.id} jobId={jobId} outputId={output.id} label={`${output.kind}: ${output.relativePath}`} />)}
-          {!!furniture?.comparisons?.length && <details><summary>Cylindo comparisons (not rendering inputs)</summary>{furniture.comparisons.map(source => <OutputPreview key={source.uploadId} jobId={jobId} uploadId={source.uploadId} label={source.relativePath} />)}</details>}
+          {[...(revision?.outputs ?? [])].sort((a,b) => {const ids=furniture?.sources.map(source=>'sourceId' in source?source.sourceId:source.uploadId)??[];return ids.indexOf(a.sourceId)-ids.indexOf(b.sourceId);}).map(output => <OutputPreview key={output.id} jobId={jobId} testMode={job.testMode} outputId={output.id} label={`${output.kind}: ${output.relativePath}`} />)}
+          {!!furniture?.comparisons?.length && <details><summary>Cylindo comparisons (not rendering inputs)</summary>{furniture.comparisons.map(source => <OutputPreview key={source.uploadId} jobId={jobId} testMode={job.testMode} uploadId={source.uploadId} label={source.relativePath} />)}</details>}
           {!!proof && !job.cancelled && !job.archivedAt && <fieldset id={`review-${combination.id}`} className={styles.proofReview} disabled={busy}>
             <legend>Review current proof</legend>
             <label>Adjustment instructions<textarea className={styles.instructions} maxLength={4000} rows={3} value={adjustments[field] ?? ''} onChange={event => setAdjustments(previous => ({...previous,[field]:event.target.value}))} /></label>

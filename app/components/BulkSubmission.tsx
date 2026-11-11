@@ -1,4 +1,5 @@
-import {useStoragePolicy} from '../lib/storage-context';
+import {modeStorage,assertMode} from '../lib/test-mode';
+import {useStoragePolicy,useTestModeEnabled} from '../lib/storage-context';
 import {validateStorageUrl} from '../lib/storage-policy';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
@@ -9,7 +10,11 @@ import type { CreateRequest, CreateResponse, UploadResponse, VerifyResponse } fr
 
 type SubmissionProps = { draft: BulkDraft; files?: never; buildManifest?: never } | { draft?: never; files: UploadSource[]; buildManifest: (uploads: Map<string,string>) => CreateRequest };
 export function BulkSubmission({ draft, files: customFiles, buildManifest }: SubmissionProps) {
-  const storage=useStoragePolicy();
+  const baseStorage=useStoragePolicy();
+  const testEnabled=useTestModeEnabled();
+  const [testMode,setTestMode]=useState(false);
+  const [modeLocked,setModeLocked]=useState(false);
+  const storage=modeStorage(baseStorage,testMode);
   const uploads = useRef(new Map<string, string>());
   const keys = useRef(new Map<string, string>());
   const jobKey = useRef(crypto.randomUUID());
@@ -23,7 +28,7 @@ export function BulkSubmission({ draft, files: customFiles, buildManifest }: Sub
   useEffect(() => { const controller = new AbortController(); abort.current = controller; return () => controller.abort(); }, []);
   async function upload() {
     if (active.current) return;
-    active.current = true; setError(''); setState('uploading');
+    active.current = true; setModeLocked(true); setError(''); setState('uploading');
     try {
       const files = customFiles ?? draftFiles(draft!);
       for (const source of files) {
@@ -38,12 +43,14 @@ export function BulkSubmission({ draft, files: customFiles, buildManifest }: Sub
         const contentType = source.file.type || ({jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp'} as Record<string,string>)[source.file.name.split('.').at(-1)!.toLowerCase()];
         let key = keys.current.get(source.relativePath);
         if (!key) { key = crypto.randomUUID(); keys.current.set(source.relativePath, key); }
-        const signed = await renderingCall<UploadResponse>({operation:'upload', key, body:{relativePath:source.relativePath, role:source.role, size:source.file.size, contentType, sha256}}, abort.current.signal);
+        const signed = await renderingCall<UploadResponse>({operation:'upload', key, body:{...(testMode?{testMode:true}:{}),relativePath:source.relativePath, role:source.role, size:source.file.size, contentType, sha256}}, abort.current.signal);
+        assertMode(signed,testMode);
         const url = validateStorageUrl(signed.upload.url,storage);
 
         const result = await fetch(url, {method:'PUT', headers:signed.upload.headers, body:source.file, credentials:'omit', referrerPolicy:'no-referrer', signal:abort.current.signal});
         if (!result.ok) throw new Error(`Azure upload failed (${result.status}) for ${source.relativePath}. Retry uploads to refresh the signed URL.`);
         const verified = await renderingCall<VerifyResponse>({operation:'verify', uploadId:signed.uploadId}, abort.current.signal);
+        assertMode(verified,testMode);
         if (!verified.verified || verified.relativePath !== source.relativePath || verified.role !== source.role) throw new Error('Upload verification mismatch.');
         uploads.current.set(source.relativePath, signed.uploadId);
       }
@@ -55,12 +62,17 @@ export function BulkSubmission({ draft, files: customFiles, buildManifest }: Sub
     if (active.current || !paid) return;
     active.current = true; setState('creating'); setError('');
     try {
-      const result = await renderingCall<CreateResponse>({operation:'create', key:jobKey.current, body:buildManifest ? buildManifest(uploads.current) : createManifest(draft!, uploads.current)}, abort.current.signal);
+      const body=buildManifest ? buildManifest(uploads.current) : createManifest(draft!, uploads.current);
+      const result = await renderingCall<CreateResponse>({operation:'create', key:jobKey.current, body:{...body,...(testMode?{testMode:true}:{})}}, abort.current.signal);
       setJob(result.id); setState('created');
     } catch (error) { setError(error instanceof Error ? error.message : 'Job creation failed.'); setState('verified'); }
     finally { active.current = false; }
   }
   return <s-section heading="Upload and submit">
+    <label><input type="checkbox" checked={testMode} disabled={!testEnabled||modeLocked} onChange={e=>setTestMode(e.target.checked)}/> Test job — separate image storage; cannot publish through the rendering API</label>
+    {!testEnabled&&<p>Test jobs are not enabled for this deployment yet.</p>}
+    <p>{testMode?'Test job: files and outputs use test storage.':'Production job: files and outputs use normal storage.'} Both modes share the worker and incur normal generation charges.</p>
+    {modeLocked&&<p>Job mode is locked. Start a new job to change mode; new uploads are required.</p>}
     <p>Selections are locked for this confirmed draft. Keep this page open until submission completes. Retrying here reuses completed uploads and the same action keys.</p>
     <p role="status">{progress}</p>
     {error && <p role="alert">{error}</p>}
