@@ -76,7 +76,8 @@ export default function RenderWorkspace() {
       <s-section heading="1. Choose a parent folder">
         <p>Organize your images as shown below, then choose or drop the parent folder. Files stay on your device until you confirm and start uploading.</p>
         <div className={styles.folderGuide}>
-          <h3>Folder structure and naming</h3>
+          <h3>Folder structure and variant mapping</h3>
+          <p><strong>Original folder upload:</strong> use the image folder below. Select fabrics for each furniture item during review. This workflow does not assign a target variant SKU.</p>
           <pre className={styles.folderExample} aria-label="Example rendering job folder structure">{`rendering-job/
 ├── furniture/
 │   └── mabel-king-bed/
@@ -96,12 +97,16 @@ export default function RenderWorkspace() {
             <li><strong>Fabric folders:</strong> use the exact color code, such as <code>ALA</code>, <code>BSQ</code> or <code>BLN</code>. Put all reference photos for that fabric inside its folder. Reuse a folder only when the material and color are the same.</li>
             <li><strong>Parent folder:</strong> choose the whole folder containing both <code>furniture</code> and <code>fabrics</code>. The parent folder can have any name.</li>
           </ul>
-          <p>For current uploads, include furniture photos and select the fabrics for each item during review. Naming is guidance; SKU matching and Shopify publishing are not connected yet.</p>
-          <details>
-            <summary>Spreadsheet and saved-angle workflow</summary>
-            <p>The <code>rendering-manifest.csv</code> has one row per target variant, with matching Color Code and Fabric Folder values. For example: <code>MFRN3456-BSQ-K → BSQ → fabrics/BSQ/</code>.</p>
-            <p>Use CSV and saved-angle review above to select saved frames and upload missing angles. Keep CSV files outside folders submitted through the original folder workflow.</p>
-          </details>
+          <p><strong>Folder names and image filenames do not identify a Shopify variant.</strong> Use product names to organize furniture, numbers to order angles, and color codes to organize fabrics. These names alone do not create a variant mapping.</p>
+          <h3>Need to map renders to a variant?</h3>
+          <p>Choose <strong>CSV and saved-angle review</strong> above. Upload <code>rendering-manifest.csv</code> separately, with one row per target variant. Include Product Name, Target Variant SKU, Color Code and Fabric Folder.</p>
+          <pre className={styles.folderExample} aria-label="Example manifest variant mapping">{`Product Name:       Mabel King Bed
+Target Variant SKU: MFRN3456-BSQ-K
+Color Code:         BSQ
+Fabric Folder:      BSQ
+Fabric images:      fabrics/BSQ/reference-01.jpg`}</pre>
+          <p>Review saved furniture angles and upload any missing angles before submission. The complete target variant SKU identifies the variant the rendered images are intended for; mapping does not publish images.</p>
+          <p><strong>Keep the CSV outside the folder you drop here.</strong> The original folder uploader accepts images only; it does not read a manifest or infer SKUs from filenames.</p>
         </div>
         <div className={styles.dropArea} onDragOver={event => event.preventDefault()} onDrop={drop}>
           <strong>Drop your rendering-job folder here</strong>
