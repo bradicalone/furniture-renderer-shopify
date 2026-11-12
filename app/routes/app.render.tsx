@@ -71,9 +71,14 @@ export default function RenderWorkspace() {
   return (
     <s-page heading="New rendering job" inlineSize="large">
       <s-button slot="secondary-actions" href="/app">Back to jobs</s-button>
-      <p><button disabled={confirmed} onClick={()=>setMode('folder')} aria-pressed={mode==='folder'}>Original folder upload</button>{' '}<button disabled={confirmed} onClick={()=>setMode('csv')} aria-pressed={mode==='csv'}>CSV and saved-angle review</button></p>
-      <div className={styles.folderGuide}>
-        <h3>Prepare your rendering files</h3>
+      <div className={styles.workflowPicker} role="group" aria-label="Upload workflow">
+        <button type="button" disabled={confirmed} onClick={()=>setMode('folder')} aria-pressed={mode==='folder'}>Original folder upload</button>
+        <button type="button" disabled={confirmed} onClick={()=>setMode('csv')} aria-pressed={mode==='csv'}>CSV and saved-angle review</button>
+      </div>
+      <p role="status">{mode==='csv' ? 'CSV review selected — map variants and use local or saved furniture angles.' : 'Original folder upload selected — upload images without variant mapping.'}</p>
+      {confirmed&&<p>Workflow selection is locked for this confirmed draft.</p>}
+      <details className={styles.folderGuide}>
+        <summary>Prepare your rendering files — folder structure and CSV guide</summary>
         <p>Use <strong>CSV and saved-angle review</strong> for variant-mapped jobs, whether you supply furniture photos or use saved angles.</p>
         <pre className={styles.folderExample} aria-label="Example CSV and image folder structure">{`rendering-job/
 ├── rendering-manifest.csv
@@ -101,7 +106,7 @@ Furniture Folder:   mabel-king-bed`}</pre>
         <p><strong>Select files in CSV review:</strong> choose the CSV, then the fabrics folder, then the optional furniture folder using their separate controls. Do not drop this entire CSV-containing folder into the original uploader.</p>
         <p>Supplied furniture angles take priority. Other requested frames are looked up using Source Variant SKU (or Target Variant SKU if omitted). Upload individually only when a requested angle is still missing.</p>
         <p>Original folder upload remains available for image-only jobs without target variant mapping. Mapping a variant does not publish images.</p>
-      </div>
+      </details>
       {mode === 'csv' ? <ManifestReview enabled={csvEnabled}/> : <>
       <s-section heading="1. Choose a parent folder">
         <p>Choose or drop your image-only parent folder. Files stay on your device until you confirm and start uploading.</p>

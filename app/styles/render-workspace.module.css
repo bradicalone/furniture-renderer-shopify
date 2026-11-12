@@ -249,3 +249,41 @@
 .columnGuide th {
   background: #f2f4ef;
 }
+
+.workflowPicker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block: 16px;
+}
+
+.workflowPicker button {
+  padding: 10px 16px;
+  border: 1px solid #858d78;
+  border-radius: 8px;
+  background: #fff;
+  color: #303030;
+  font: inherit;
+  cursor: pointer;
+}
+
+.workflowPicker button[aria-pressed="true"] {
+  background: #394433;
+  color: #fff;
+  font-weight: 650;
+}
+
+.workflowPicker button:focus-visible {
+  outline: 3px solid #005bd3;
+  outline-offset: 3px;
+}
+
+.workflowPicker button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.folderGuide > summary {
+  font-weight: 650;
+  cursor: pointer;
+}
