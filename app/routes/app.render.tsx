@@ -72,42 +72,40 @@ export default function RenderWorkspace() {
     <s-page heading="New rendering job" inlineSize="large">
       <s-button slot="secondary-actions" href="/app">Back to jobs</s-button>
       <p><button disabled={confirmed} onClick={()=>setMode('folder')} aria-pressed={mode==='folder'}>Original folder upload</button>{' '}<button disabled={confirmed} onClick={()=>setMode('csv')} aria-pressed={mode==='csv'}>CSV and saved-angle review</button></p>
-      {mode === 'csv' ? <ManifestReview enabled={csvEnabled}/> : <>
-      <s-section heading="1. Choose a parent folder">
-        <p>Organize your images as shown below, then choose or drop the parent folder. Files stay on your device until you confirm and start uploading.</p>
-        <div className={styles.folderGuide}>
-          <h3>Folder structure and variant mapping</h3>
-          <p><strong>Original folder upload:</strong> use the image folder below. Select fabrics for each furniture item during review. This workflow does not assign a target variant SKU.</p>
-          <pre className={styles.folderExample} aria-label="Example rendering job folder structure">{`rendering-job/
-├── furniture/
+      <div className={styles.folderGuide}>
+        <h3>Prepare your rendering files</h3>
+        <p>Use <strong>CSV and saved-angle review</strong> for variant-mapped jobs, whether you supply furniture photos or use saved angles.</p>
+        <pre className={styles.folderExample} aria-label="Example CSV and image folder structure">{`rendering-job/
+├── rendering-manifest.csv
+├── furniture/                 (optional: your own angles)
 │   └── mabel-king-bed/
-│       ├── 01.jpg
-│       └── 02.jpg
+│       ├── 01-front.jpg
+│       └── 02-angle.jpg
 └── fabrics/
     ├── ALA/
-    │   ├── reference-01.jpg
-    │   └── reference-02.jpg
-    ├── BSQ/
     │   └── reference-01.jpg
-    └── BLN/
-        └── reference-01.jpg`}</pre>
-          <ul>
-            <li><strong>Furniture folders:</strong> use the product name and size, such as <code>mabel-king-bed</code>. The same source angles can be used with multiple fabrics.</li>
-            <li><strong>Angle files:</strong> start with a two-digit order number: <code>01.jpg</code>, <code>02.jpg</code>, and so on. Descriptions are optional, such as <code>01-front.jpg</code>. You choose the first proof during review.</li>
-            <li><strong>Fabric folders:</strong> use the exact color code, such as <code>ALA</code>, <code>BSQ</code> or <code>BLN</code>. Put all reference photos for that fabric inside its folder. Reuse a folder only when the material and color are the same.</li>
-            <li><strong>Parent folder:</strong> choose the whole folder containing both <code>furniture</code> and <code>fabrics</code>. The parent folder can have any name.</li>
-          </ul>
-          <p><strong>Folder names and image filenames do not identify a Shopify variant.</strong> Use product names to organize furniture, numbers to order angles, and color codes to organize fabrics. These names alone do not create a variant mapping.</p>
-          <h3>Need to map renders to a variant?</h3>
-          <p>Choose <strong>CSV and saved-angle review</strong> above. Upload <code>rendering-manifest.csv</code> separately, with one row per target variant. Include Product Name, Target Variant SKU, Color Code and Fabric Folder.</p>
-          <pre className={styles.folderExample} aria-label="Example manifest variant mapping">{`Product Name:       Mabel King Bed
+    └── BSQ/
+        ├── reference-01.jpg
+        └── reference-02.jpg`}</pre>
+        <ul>
+          <li><strong>CSV:</strong> one row per target variant/color. The full Target Variant SKU identifies the variant the renders belong to.</li>
+          <li><strong>Furniture Folder:</strong> match the product subfolder exactly, such as <code>mabel-king-bed</code>. The same angles can serve multiple fabric rows.</li>
+          <li><strong>Angle filenames:</strong> use unique frame prefixes <code>01</code>–<code>32</code>. For example, <code>02-angle.jpg</code> is frame 2. Choose the frame order and first proof during review.</li>
+          <li><strong>Fabric Folder:</strong> match the fabric subfolder exactly, such as <code>BSQ</code>. Multiple photos inside that folder describe the same fabric/color.</li>
+        </ul>
+        <pre className={styles.folderExample} aria-label="Example spreadsheet row">{`Product Name:       Mabel King Bed
 Target Variant SKU: MFRN3456-BSQ-K
 Color Code:         BSQ
 Fabric Folder:      BSQ
-Fabric images:      fabrics/BSQ/reference-01.jpg`}</pre>
-          <p>In CSV review, optionally select your furniture folder to match local angles using the Furniture Folder column. Local angles take priority; look up saved images for other requested frames, then upload any that are still missing. The complete target variant SKU identifies the variant the rendered images are intended for; mapping does not publish images.</p>
-          <p><strong>Keep the CSV outside the folder you drop here.</strong> The original folder uploader accepts images only; it does not read a manifest or infer SKUs from filenames.</p>
-        </div>
+Furniture Folder:   mabel-king-bed`}</pre>
+        <p><strong>Select files in CSV review:</strong> choose the CSV, then the fabrics folder, then the optional furniture folder using their separate controls. Do not drop this entire CSV-containing folder into the original uploader.</p>
+        <p>Supplied furniture angles take priority. Other requested frames are looked up using Source Variant SKU (or Target Variant SKU if omitted). Upload individually only when a requested angle is still missing.</p>
+        <p>Original folder upload remains available for image-only jobs without target variant mapping. Mapping a variant does not publish images.</p>
+      </div>
+      {mode === 'csv' ? <ManifestReview enabled={csvEnabled}/> : <>
+      <s-section heading="1. Choose a parent folder">
+        <p>Choose or drop your image-only parent folder. Files stay on your device until you confirm and start uploading.</p>
+        <p>For this image-only workflow, select a parent folder containing furniture and fabrics, without a CSV. To map renders to target variants, use CSV and saved-angle review above.</p>
         <div className={styles.dropArea} onDragOver={event => event.preventDefault()} onDrop={drop}>
           <strong>Drop your rendering-job folder here</strong>
           <label htmlFor="job-folder">Choose folder</label>
