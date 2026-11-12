@@ -1,7 +1,7 @@
 import {useStoragePolicy} from '../lib/storage-context';
 import {validateStorageUrl} from '../lib/storage-policy';
 import {BulkSubmission} from './BulkSubmission';
-import {csvManifest,csvUploadFiles} from '../lib/csv-submission';
+import {localAngles,csvManifest,csvUploadFiles} from '../lib/csv-submission';
 import type {ReviewedVariant} from '../lib/csv-submission';
 import type {ResolveSourcesResponse,SourceDownloadResponse} from '../lib/rendering-types';
 import {useCallback,useEffect,useRef,useState} from 'react';
@@ -23,35 +23,38 @@ function SavedPreview({sourceId}:{sourceId:string}) {
   useEffect(()=>{const t=setTimeout(()=>void refresh(),0);return()=>clearTimeout(t);},[refresh]); // Preview URLs live only in component state.
   return <>{url&&<img src={url} referrerPolicy="no-referrer" alt="Resolved furniture source" style={{maxWidth:200,maxHeight:200}} onError={()=>setError('Preview expired. Refresh the link.')}/>}<button onClick={refresh}>Refresh source preview</button>{error&&<p role="alert">{error}</p>}</>;
 }
-function VariantReview({row,fabrics,onReview}:{row:ManifestRow;fabrics:FolderGroup[];onReview:(sku:string,value:ReviewedVariant|null)=>void}) {
+function VariantReview({row,fabrics,furniture,onReview}:{row:ManifestRow;fabrics:FolderGroup[];furniture:FolderGroup[];onReview:(sku:string,value:ReviewedVariant|null)=>void}) {
   const [result,setResult]=useState<AngleLookup>();
   const [error,setError]=useState('');const [busy,setBusy]=useState(false);
-  const [frames,setFrames]=useState([1,3,5,9,17]);
-  const [files,setFiles]=useState<Record<number,File>>({});
+  const local=localAngles(furniture.find(f=>f.name===row.furnitureFolder));
+  const initialFrames=Object.keys(local).map(Number);
+  const [frames,setFrames]=useState(initialFrames.length?initialFrames:[1,3,5,9,17]);
+  const [files,setFiles]=useState<Record<number,File>>(local);
   const [confirmed,setConfirmed]=useState(false);
   const [resolved,setResolved]=useState<ResolveSourcesResponse>();
-  const [firstFrame,setFirstFrame]=useState(1);const [bed,setBed]=useState(false);
+  const [firstFrame,setFirstFrame]=useState(initialFrames[0]??1);const [bed,setBed]=useState(false);
   const resolver=useRef<{body:string;key:string}|null>(null);
   function invalidate(){setConfirmed(false);onReview(row.sku,null);}
   const fabric=fabrics.find(f=>f.name===row.fabricFolder);
   async function lookup(fresh=false){if(busy)return;setBusy(true);setError('');invalidate();setResult(undefined);setResolved(undefined);
-    const body={sourceVariantSku:row.sourceVariantSku||row.sku,frames};const signature=JSON.stringify(body);
+    const body={sourceVariantSku:row.sourceVariantSku||row.sku,frames:frames.filter(frame=>!files[frame])};const signature=JSON.stringify(body);
     if(fresh||resolver.current?.body!==signature)resolver.current={body:signature,key:crypto.randomUUID()};
     try{
       const match=await renderingCall<AngleLookup>({sku:row.sku},undefined,'/app/api/rendering-sources');
-      const source=await renderingCall<ResolveSourcesResponse>({operation:'resolveSources',key:resolver.current!.key,body});
+      const source:ResolveSourcesResponse=body.frames.length ? await renderingCall<ResolveSourcesResponse>({operation:'resolveSources',key:resolver.current!.key,body}) : {sourceVariantSku:body.sourceVariantSku,sources:[],missingFrames:[]};
       setResult(match);setResolved(source);
     }catch(e){setError(e instanceof Error?e.message:'Lookup failed.');}finally{setBusy(false);}}
   const ready=!!result&&!!resolved&&!!fabric?.files.length&&frames.length>0&&frames.includes(firstFrame)&&frames.every(frame=>files[frame]||resolved.sources.some(i=>i.frame===frame));
   return <article className={styles.jobCard}>
     <h3>{row.productName} — {row.sku}</h3>
     <p>Color code: {row.color} · Fabric folder: {row.fabricFolder} · {fabric ? `${fabric.files.length} reference photos` : 'Fabric folder missing'}</p>
-    {row.sourceProductCode && <p>Source product code (for review): {row.sourceProductCode}. Lookup uses the complete target variant SKU.</p>}
+    {row.sourceProductCode && <p>Source product code (for review): {row.sourceProductCode}. Saved lookup uses {row.sourceVariantSku||row.sku}.</p>}
+    {row.furnitureFolder&&<p>Furniture folder: {row.furnitureFolder} · {initialFrames.length ? `${initialFrames.length} local angles loaded` : "No local angles supplied"}</p>}
     {row.instructions && <p>Instructions: {row.instructions}</p>}
     <button disabled={busy} onClick={()=>lookup()}>{busy?'Looking up…':'Resolve / retry selected angles'}</button><button disabled={busy} onClick={()=>lookup(true)}>Resolve fresh versions after catalog changes</button>
     {error&&<p role="alert">{error}</p>}
     <fieldset disabled={busy}><legend>Frame order and first proof</legend>
-      <label>Frame order (comma-separated)<input defaultValue="1,3,5,9,17" onBlur={e=>{const next=e.target.value.split(',').map(v=>Number(v.trim()));invalidate();setResolved(undefined);if(!next.length||next.length>32||next.some(f=>!Number.isInteger(f)||f<1||f>32)||new Set(next).size!==next.length){setFrames([]);setError('Enter unique frame numbers 1–32.');return;}setFrames(next);if(!next.includes(firstFrame))setFirstFrame(next[0]);setError('');}}/></label>
+      <label>Frame order (comma-separated)<input defaultValue={frames.join(",")} onBlur={e=>{const next=e.target.value.split(',').map(v=>Number(v.trim()));invalidate();setResolved(undefined);if(!next.length||next.length>32||next.some(f=>!Number.isInteger(f)||f<1||f>32)||new Set(next).size!==next.length){setFrames([]);setError('Enter unique frame numbers 1–32.');return;}setFrames(next);if(!next.includes(firstFrame))setFirstFrame(next[0]);setError('');}}/></label>
       <label>First proof<select value={firstFrame} onChange={e=>{invalidate();setFirstFrame(Number(e.target.value));}}>{frames.map(f=><option key={f} value={f}>Frame {f}</option>)}</select></label>
       <label><input type="checkbox" checked={bed} onChange={e=>{invalidate();setBed(e.target.checked);}}/> This is a bed: add mattress, white sheets and pillows</label>
     </fieldset>
@@ -60,9 +63,9 @@ function VariantReview({row,fabrics,onReview}:{row:ManifestRow;fabrics:FolderGro
       <p>Confirm the color code against these Shopify options and your fabric photos. Codes are not inferred from SKU segments.</p>
       <div className={styles.uploadGrid}>{frames.map(frame=>{
         const saved=resolved.sources.find(i=>i.frame===frame);
-        return <div className={styles.uploadCard} key={frame}><strong>Frame {frame} — {files[frame]?'Local replacement':saved?'Found':'Missing'}</strong>
+        return <div className={styles.uploadCard} key={frame}><strong>Frame {frame} — {files[frame]?'Local image supplied':saved?'Found':'Missing'}</strong>
           {files[frame]?<LocalPreview file={files[frame]}/>:saved?<SavedPreview sourceId={saved.sourceId}/>:<span>Upload this requested angle.</span>}
-          <label>{saved?'Replace angle (optional)':'Upload missing angle'}<input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>{
+          <label>{files[frame]||saved?'Replace angle (optional)':'Upload missing angle'}<input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>{
             const file=e.target.files?.[0];e.target.value='';if(!file)return;
             if(!/\.(jpe?g|png|webp)$/i.test(file.name)||!['','image/jpeg','image/png','image/webp'].includes(file.type)||file.size===0||file.size>20*1024*1024){setError('Choose a JPEG, PNG or WebP between 1 byte and 20 MiB.');return;}
             setError('');invalidate();setFiles(v=>({...v,[frame]:file}));
@@ -83,6 +86,7 @@ export function ManifestReview({enabled=false}:{enabled?:boolean}){
   const [background,setBackground]=useState<'white'|'transparent'>('white');const [shadows,setShadows]=useState(true);const [instructions,setInstructions]=useState('');
   const onReview=(sku:string,value:ReviewedVariant|null)=>setReviews(v=>{const next={...v};if(value)next[sku]=value;else delete next[sku];return next;});
   const [rows,setRows]=useState<ManifestRow[]>([]);const [error,setError]=useState('');
+  const [furniture,setFurniture]=useState<FolderGroup[]>([]);
   const [fabrics,setFabrics]=useState<FolderGroup[]>([]);const [version,setVersion]=useState(0);
   return <s-section heading="CSV variant review">
     <p>Choose your variant spreadsheet and fabric photos, then review the matches below. Files stay on your device until you confirm and start uploading.</p>
@@ -124,13 +128,31 @@ export function ManifestReview({enabled=false}:{enabled?:boolean}){
     </div>
     {error&&<p role="alert" className={styles.requestError}>{error}</p>}
     <div className={styles.uploadCard}>
+      <h3>Local furniture angles (optional)</h3>
+      <p>Choose the furniture folder containing product subfolders. Each CSV Furniture Folder value must match its subfolder exactly. Supplied images take priority over saved images.</p>
+      <p>Use frame numbers in filenames: 01-front.jpg maps to frame 1, 02.jpg to frame 2, and 17-back.jpg to frame 17. Local frames become the initial selection; add other requested frames during review.</p>
+      <label>Choose furniture folder<input type="file" multiple ref={e=>e?.setAttribute('webkitdirectory','')} onChange={e=>{
+        const files=Array.from(e.target.files??[]);e.target.value='';if(!files.length)return;
+        setReviews({});setFurniture([]);setVersion(v=>v+1);setError('');
+        try {
+          const parsed=parseFolder(files.map(file=>({file,relativePath:`review/furniture/${file.webkitRelativePath.split('/').slice(1).join('/')}`})));
+          if(parsed.rejected.length)throw new Error(parsed.rejected.map(r=>`${r.path}: ${r.reason}`).join('; '));
+          if(!parsed.furniture.length)throw new Error('Choose the furniture folder containing product subfolders.');
+          parsed.furniture.forEach(group=>localAngles(group));
+          setFurniture(parsed.furniture);
+        }catch(e){setError(e instanceof Error?e.message:'Invalid furniture folder.');}
+      }}/></label>
+      <p role="status">{furniture.length} furniture folders selected</p>
+      {!!furniture.length&&<button onClick={()=>{setFurniture([]);setReviews({});setVersion(v=>v+1);}}>Clear local furniture</button>}
+    </div>
+    <div className={styles.uploadCard}>
       <h3>2. Batch rendering settings</h3>
       <label>Background <select value={background} onChange={e=>setBackground(e.target.value as 'white'|'transparent')}><option value="white">White</option><option value="transparent">Transparent</option></select></label>
       <label><input type="checkbox" checked={shadows} onChange={e=>setShadows(e.target.checked)}/> Realistic contact shadows</label>
       <label>Batch instructions (optional)<textarea className={styles.instructions} rows={3} maxLength={4000} value={instructions} onChange={e=>setInstructions(e.target.value)}/></label>
     </div>
     {!!rows.length&&<h3>3. Review variants and source angles</h3>}
-    <div className={styles.jobList}>{rows.map(row=><VariantReview key={`${version}:${row.sku}`} row={row} fabrics={fabrics} onReview={onReview}/>)}</div>
+    <div className={styles.jobList}>{rows.map(row=><VariantReview key={`${version}:${row.sku}`} row={row} fabrics={fabrics} furniture={furniture} onReview={onReview}/>)}</div>
     </fieldset>
     {!locked&&<button disabled={!enabled||!rows.length||rows.some(r=>!reviews[r.sku])} onClick={()=>setLocked(true)}>Confirm batch and continue to uploads</button>}
     {locked&&<BulkSubmission files={csvUploadFiles(rows.map(r=>reviews[r.sku]),fabrics)} buildManifest={uploads=>csvManifest(rows.map(r=>reviews[r.sku]),fabrics,uploads,{background,shadows,instructions})}/>}

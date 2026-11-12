@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {csvManifest,csvUploadFiles} from '../app/lib/csv-submission.ts';
+import {localAngles,csvManifest,csvUploadFiles} from '../app/lib/csv-submission.ts';
 const file=new File(['image'],'angle.jpg',{type:'image/jpeg'});
 const item={row:{productName:'Bed',sku:'TARGET',sourceVariantSku:'SOURCE',color:'ALA',fabricFolder:'ALA',instructions:''},variant:{id:'gid://shopify/ProductVariant/2',product:{id:'gid://shopify/Product/1'}},resolved:{sourceVariantSku:'SOURCE',sources:[{sourceId:'saved',sourceVersion:'version',frame:17,relativePath:'cylindo/SOURCE/frame-17.png',url:'must-not-persist'}]},frames:[17,5],firstFrame:5,files:{5:file},bed:false};
 const fabrics=[{name:'ALA',files:[{file,relativePath:'review/fabrics/ALA/ref.jpg'}]}];
@@ -26,4 +26,15 @@ test('saved proof can differ from first displayed angle',()=>{
  const files=csvUploadFiles([other],fabrics);const manifest=csvManifest([other],fabrics,new Map(files.map((f,i)=>[f.relativePath,`u${i}`])),settings);
  assert.equal(manifest.furniture[0].firstProofSourceId,'saved');
  assert.deepEqual(manifest.furniture[0].sources.map(s=>s.frame),[5,17]);
+});
+
+test('local furniture maps explicit numbered frames and rejects ambiguity',()=>{
+ const front=new File(['image'],'01-front.jpg',{type:'image/jpeg'});
+ const second=new File(['image'],'02.jpg',{type:'image/jpeg'});
+ const group={name:'Octavia Sofa',files:[{file:second,relativePath:'furniture/Octavia Sofa/02.jpg'},{file:front,relativePath:'furniture/Octavia Sofa/01-front.jpg'}]};
+ assert.deepEqual(Object.keys(localAngles(group)),['1','2']);
+ assert.equal(localAngles(group)[2],second);
+ assert.deepEqual(localAngles(),{});
+ assert.throws(()=>localAngles({...group,files:[...group.files,group.files[0]]}),/duplicate frame/);
+ assert.throws(()=>localAngles({name:'Sofa',files:[{file,relativePath:'angle.jpg'}]}),/frame number/);
 });

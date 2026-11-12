@@ -33,3 +33,16 @@ export function csvManifest(items:ReviewedVariant[],fabrics:FolderGroup[],upload
   });
   return {name:'CSV furniture batch',jobInstructions:settings.instructions,furniture,combinations,fabrics:fabrics.filter(f=>colors.has(f.name)).map(f=>({id:f.name,name:f.name,folder:`review/fabrics/${f.name}`,references:f.files.map(file=>ref(file.relativePath))}))};
 }
+
+// Prefixes are explicit frame identifiers, not positions in the default frame list.
+export function localAngles(group?:FolderGroup):Record<number,File>{
+  const result:Record<number,File>={};
+  for(const source of group?.files??[]){
+    const match=/^(\d{2})(?:[-_ .]|$)/.exec(source.file.name);
+    const frame=Number(match?.[1]);
+    if(!match||frame<1||frame>32)throw new Error(`${source.relativePath}: start the filename with a frame number from 01 to 32.`);
+    if(result[frame])throw new Error(`${group!.name}: duplicate frame ${frame}. Use one image per frame.`);
+    result[frame]=source.file;
+  }
+  return result;
+}

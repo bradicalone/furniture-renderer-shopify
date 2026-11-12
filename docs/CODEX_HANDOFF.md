@@ -258,3 +258,7 @@ RENDERING_TEST_MODE_ENABLED unset/false in DigitalOcean until API 1.4, migration
 The app server also rejects test upload/create requests while disabled. Do not
 change production storage variables or APP_ENV. No cloud resources or generation
 were touched during frontend implementation.
+
+
+### CSV local furniture folders
+CSV review now offers an optional furniture directory picker alongside the CSV and fabric picker. Furniture Folder matches an exact product subfolder name. Files must have unique two-digit frame prefixes 01–32; 02 means frame 2, not the second default Cylindo frame. Matching local frames initialize selection in numeric order, with explicit first-proof selection still available. Local images take priority; resolution requests only frames without local files, and fully local selections still validate the target Shopify variant. Backend catalog grants remain enforced at creation. Files stay local until confirmation, and existing test-mode upload/verification and proof-first creation remain unchanged. Changing folders resets reviews. Original folder-only upload remains separate and does not parse CSV.

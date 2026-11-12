@@ -105,7 +105,7 @@ Target Variant SKU: MFRN3456-BSQ-K
 Color Code:         BSQ
 Fabric Folder:      BSQ
 Fabric images:      fabrics/BSQ/reference-01.jpg`}</pre>
-          <p>Review saved furniture angles and upload any missing angles before submission. The complete target variant SKU identifies the variant the rendered images are intended for; mapping does not publish images.</p>
+          <p>In CSV review, optionally select your furniture folder to match local angles using the Furniture Folder column. Local angles take priority; look up saved images for other requested frames, then upload any that are still missing. The complete target variant SKU identifies the variant the rendered images are intended for; mapping does not publish images.</p>
           <p><strong>Keep the CSV outside the folder you drop here.</strong> The original folder uploader accepts images only; it does not read a manifest or infer SKUs from filenames.</p>
         </div>
         <div className={styles.dropArea} onDragOver={event => event.preventDefault()} onDrop={drop}>
